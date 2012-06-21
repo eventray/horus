@@ -6,7 +6,8 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = ''#open(os.path.join(here, 'README.md')).read()
 CHANGES = ''#open(os.path.join(here, 'CHANGES.txt')).read()
 
-requires = ['pyramid', 'sqlalchemy']
+requires = ['pyramid', 'sqlalchemy', 'cryptacular', 'colander',
+        'deform', 'pyramid_deform']
 
 setup(name='horus'
       , version='0.2'
