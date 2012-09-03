@@ -1,7 +1,12 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from horus.tests import IntegrationTestBase
 from pyramid import testing
 from mock import patch
 from mock import Mock
+
 
 class TestViews(IntegrationTestBase):
     def test_index(self):
@@ -26,17 +31,17 @@ class TestViews(IntegrationTestBase):
             request.user = Mock()
             res = self.app.get('/login').follow()
             #TODO: Patch index request as well so that it redirects to dashboard
-            assert 'index' in res.body
+            assert b'index' in res.body
 
     def test_empty_login(self):
         """ Empty login fails """
-        res = self.app.post('/login', {'submit': True})
+        res = self.app.post(str('/login'), {'submit': True})
 
-        assert "There was a problem with your submission" in res.body
-        assert "Required" in res.body
+        assert b"There was a problem with your submission" in res.body
+        assert b"Required" in res.body
         assert res.status_int == 200
 
-    def test_valid_login(self): 
+    def test_valid_login(self):
         """ Call the login view, make sure routes are working """
         from horus.tests.models import User
         admin = User(user_name='sontek', email='sontek@gmail.com')
@@ -48,7 +53,7 @@ class TestViews(IntegrationTestBase):
 
         csrf = res.form.fields['csrf_token'][0].value
 
-        res = self.app.post('/login', 
+        res = self.app.post(str('/login'),
             {
                 'submit': True,
                 'User_name': 'sontek',
@@ -60,7 +65,7 @@ class TestViews(IntegrationTestBase):
         assert res.status_int == 302
 
     def test_inactive_login(self):
-        """ Make sure inactive users can't sign in"""
+        """Make sure inactive users can't sign in."""
         from horus.tests.models import User
         from horus.tests.models import Activation
         admin = User(user_name='sontek', email='sontek@gmail.com')
@@ -73,7 +78,7 @@ class TestViews(IntegrationTestBase):
 
         csrf = res.form.fields['csrf_token'][0].value
 
-        res = self.app.post('/login', 
+        res = self.app.post(str('/login'),
             {
                 'submit': True,
                 'User_name': 'sontek',
@@ -82,4 +87,5 @@ class TestViews(IntegrationTestBase):
             }
         )
 
-        assert 'Your account is not active, please check your e-mail.' in res.body
+        assert b'Your account is not active, please check your e-mail.' \
+            in res.body

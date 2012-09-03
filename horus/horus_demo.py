@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+
+'''Demonstration'''
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from pyramid.config import Configurator
 
+
 def main(global_config, **settings):
-    """ This function returns a Pyramid WSGI application.
-    """
+    """This function returns a Pyramid WSGI application."""
     config = Configurator(settings=settings)
     #secret = 'asdfasdf'
     #config.set_authorization_policy(AuthorizationPolicy())

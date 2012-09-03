@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 import unittest
 from webtest                import TestApp
 from sqlalchemy             import engine_from_config
@@ -18,7 +22,6 @@ from horus.interfaces       import IHorusUserClass
 from horus.interfaces       import IHorusActivationClass
 from pkg_resources          import resource_filename
 from hem.interfaces         import IDBSession
-
 import os
 
 here = os.path.dirname(__file__)
@@ -26,6 +29,7 @@ here = os.path.dirname(__file__)
 settings = appconfig('config:' + resource_filename(__name__, 'test.ini'))
 
 DBSession = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+
 
 class BaseTestCase(unittest.TestCase):
     @classmethod
@@ -58,6 +62,7 @@ class BaseTestCase(unittest.TestCase):
         self.trans.rollback()
         self.session.close()
 
+
 class UnitTestBase(BaseTestCase):
     def get_csrf_request(self, post=None, request_method='GET'):
         csrf = 'abc'
@@ -65,7 +70,7 @@ class UnitTestBase(BaseTestCase):
         if not post:
             post = {}
 
-        if not u'csrf_token' in post.keys():
+        if not 'csrf_token' in post.keys():
             post.update({
                 'csrf_token': csrf
             })
@@ -80,6 +85,7 @@ class UnitTestBase(BaseTestCase):
         request.method = request_method
 
         return request
+
 
 class IntegrationTestBase(unittest.TestCase):
     def main(self, global_config, **settings):
@@ -99,7 +105,6 @@ class IntegrationTestBase(unittest.TestCase):
 
         authz_policy = ACLAuthorizationPolicy()
         config.set_authorization_policy(authz_policy)
-
 
         authn_policy = AuthTktAuthenticationPolicy('secret')
         config.set_authentication_policy(authn_policy)
@@ -131,7 +136,7 @@ class IntegrationTestBase(unittest.TestCase):
         # begin a non-ORM transaction
         self.trans = connection.begin()
 
-        Base.metadata.bind=connection
+        Base.metadata.bind = connection
 
     def tearDown(self):
         # rollback - everything that happened with the

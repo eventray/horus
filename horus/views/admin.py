@@ -1,15 +1,16 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from horus.views            import BaseController
 from horus.schemas          import AdminUserSchema
 from horus.forms            import HorusForm
 from horus.resources        import RootFactory
-from horus.interfaces       import IHorusUserClass
+from horus.models           import _
 from pyramid.view           import view_config
 from pyramid.httpexceptions import HTTPFound
-from pyramid.i18n           import TranslationStringFactory
-
 import deform
 
-_ = TranslationStringFactory('horus')
 
 class AdminController(BaseController):
     @view_config(
@@ -37,7 +38,7 @@ class AdminController(BaseController):
             try:
                 controls = self.request.POST.items()
                 captured = form.validate(controls)
-            except deform.ValidationFailure, e:
+            except deform.ValidationFailure as e:
                 return dict(form=e, errors=e.error.children)
 
             if isinstance(self.request.context, RootFactory):
@@ -53,7 +54,7 @@ class AdminController(BaseController):
 
             self.db.add(user)
 
-            self.request.session.flash(_(u'The user was created'), 'success')
+            self.request.session.flash(_('The user was created'), 'success')
 
             return HTTPFound(
                 location=self.request.route_url('horus_admin_users_index')

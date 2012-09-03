@@ -1,13 +1,18 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 import colander
 import deform
 
 from pyramid_deform import CSRFSchema
 
+
 class ProfileSchema(CSRFSchema):
     User_name = colander.SchemaNode(colander.String(),
-            widget=deform.widget.TextInputWidget(template='readonly/textinput'),
-            missing=colander.null,
-        )
+        widget=deform.widget.TextInputWidget(template='readonly/textinput'),
+        missing=colander.null,
+    )
     Email = colander.SchemaNode(colander.String(),
         validator=colander.Email())
     First = colander.SchemaNode(colander.String())

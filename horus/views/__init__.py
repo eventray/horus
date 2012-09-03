@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from pyramid.view           import view_config
 from pyramid.url            import route_url
-from pyramid.i18n           import TranslationStringFactory
 from pyramid.security       import remember
 from pyramid.security       import forget
 from pyramid.httpexceptions import HTTPFound
@@ -26,17 +29,16 @@ from horus.events           import NewRegistrationEvent
 from horus.events           import RegistrationActivatedEvent
 from horus.events           import PasswordResetEvent
 from horus.events           import ProfileUpdatedEvent
+from horus.models import _
 from hem.db                 import get_session
 
 import deform
 import pystache
 
 
-_ = TranslationStringFactory('horus')
-
 def authenticated(request, pk):
-    """ This sets the auth cookies and redirects to the page defined
-        in horus.login_redirect, defaults to a view named 'index'
+    """Sets the auth cookies and redirects to the page defined
+    in horus.login_redirect, which defaults to a view named 'index'.
     """
     settings = request.registry.settings
     headers = remember(request, pk)
@@ -48,6 +50,7 @@ def authenticated(request, pk):
     login_redirect_view = route_url(settings.get('horus.login_redirect', 'index'), request)
 
     return HTTPFound(location=login_redirect_view, headers=headers)
+
 
 def create_activation(request, user):
     db = get_session(request)
@@ -80,11 +83,12 @@ class BaseController(object):
         return self._request
 
     def __init__(self, request):
-        self._request  = request
+        self._request = request
         self.settings = request.registry.settings
         self.User = request.registry.getUtility(IHorusUserClass)
         self.Activation = request.registry.getUtility(IHorusActivationClass)
         self.db = get_session(request)
+
 
 class AuthController(BaseController):
     def __init__(self, request):
@@ -102,8 +106,8 @@ class AuthController(BaseController):
 
         self.form = form(self.schema)
 
-
-    @view_config(route_name='horus_login', renderer='horus:templates/login.mako')
+    @view_config(route_name='horus_login',
+        renderer='horus:templates/login.mako')
     def login(self):
         if self.request.method == 'GET':
             if self.request.user:
@@ -114,7 +118,7 @@ class AuthController(BaseController):
             try:
                 controls = self.request.POST.items()
                 captured = self.form.validate(controls)
-            except deform.ValidationFailure, e:
+            except deform.ValidationFailure as e:
                 return {'form': e.render(), 'errors': e.error.children}
 
             username = captured['User_name']
@@ -130,11 +134,12 @@ class AuthController(BaseController):
                             password)
 
             if user:
-                if not self.allow_inactive_login:
-                    if self.require_activation:
-                        if not user.is_activated:
-                            self.request.session.flash(_(u'Your account is not active, please check your e-mail.'), 'error')
-                            return {'form': self.form.render()}
+                if not self.allow_inactive_login and self.require_activation \
+                        and not user.is_activated:
+                    self.request.session.flash(
+                        _('Your account is not active, please check your e-mail.'),
+                        'error')
+                    return {'form': self.form.render()}
 
                 return authenticated(self.request, user.pk)
 
@@ -144,9 +149,8 @@ class AuthController(BaseController):
 
     @view_config(permission='view', route_name='horus_logout')
     def logout(self):
-        """
-        Removes the auth cookies and redirects to the view defined in 
-        horus.lgout_redirect, defaults to a view named 'index'
+        """Removes the auth cookies and redirects to the view defined in
+        horus.logout_redirect, which defaults to a view named 'index'.
         """
         self.request.session.invalidate()
         self.request.session.flash(_('Logged out successfully.'), 'success')
@@ -180,7 +184,7 @@ class ForgotPasswordController(BaseController):
             try:
                 controls = self.request.POST.items()
                 captured = form.validate(controls)
-            except deform.ValidationFailure, e:
+            except deform.ValidationFailure as e:
                 return {'form': e.render(), 'errors': e.error.children}
 
             email = captured['Email']
@@ -238,7 +242,7 @@ class ForgotPasswordController(BaseController):
                     try:
                         controls = self.request.POST.items()
                         captured = form.validate(controls)
-                    except deform.ValidationFailure, e:
+                    except deform.ValidationFailure as e:
                         return {'form': e.render(), 'errors': e.error.children}
 
                     password = captured['Password']
@@ -267,27 +271,29 @@ class RegisterController(BaseController):
         form = request.registry.getUtility(IHorusRegisterForm)
         self.form = form(self.schema)
 
-        self.register_redirect_view = route_url(self.settings.get('horus.register_redirect', 'index'), request)
-        self.activate_redirect_view = route_url(self.settings.get('horus.activate_redirect', 'index'), request)
+        self.register_redirect_view = route_url(
+            self.settings.get('horus.register_redirect', 'index'), request)
+        self.activate_redirect_view = route_url(
+            self.settings.get('horus.activate_redirect', 'index'), request)
 
-        self.require_activation = asbool(self.settings.get('horus.require_activation', True))
+        self.require_activation = asbool(
+            self.settings.get('horus.require_activation', True))
 
         if self.require_activation:
             self.mailer = get_mailer(request)
 
-    @view_config(route_name='horus_register', renderer='horus:templates/register.mako')
+    @view_config(route_name='horus_register',
+        renderer='horus:templates/register.mako')
     def register(self):
         if self.request.method == 'GET':
             if self.request.user:
                 return HTTPFound(location=self.register_redirect_view)
-
             return {'form': self.form.render()}
         elif self.request.method == 'POST':
-
             try:
                 controls = self.request.POST.items()
                 captured = self.form.validate(controls)
-            except deform.ValidationFailure, e:
+            except deform.ValidationFailure as e:
                 return {'form': e.render(), 'errors': e.error.children}
 
             email = captured['Email']
@@ -302,10 +308,11 @@ class RegisterController(BaseController):
 
             if user:
                 if user.user_name == username:
-                    self.request.session.flash(_('That username is already used.'), 'error')
+                    self.request.session.flash(
+                        _('That username is already used.'), 'error')
                 elif user.email == email:
-                    self.request.session.flash(_('That e-mail is already used.'), 'error')
-
+                    self.request.session.flash(
+                        _('That e-mail is already used.'), 'error')
                 return {'form': self.form.render(self.request.POST)}
 
             activation = None
@@ -319,27 +326,27 @@ class RegisterController(BaseController):
                 if self.require_activation:
                     # SEND EMAIL ACTIVATION
                     create_activation(self.request, user)
-                    self.request.session.flash(_('Please check your E-mail for an activation link'), 'success')
+                    self.request.session.flash(
+                        _('Please check your e-mail for an activation link.'),
+                        'success')
                 else:
                     if not autologin:
-                        self.request.session.flash(_('You have been registered, you may login now!'), 'success')
-
-            except Exception as exc:
-                self.request.session.flash(exc.message, 'error')
+                        self.request.session.flash(
+                            _('You have been registered, you may log in now!'),
+                            'success')
+            except Exception as exc:  # TODO Catch finer-grained exceptions
+                self.request.session.flash(exc.args[0], 'error')
                 return {'form': self.form.render()}
 
             self.request.registry.notify(
                 NewRegistrationEvent(self.request, user, activation,
                     captured)
             )
-
-
             if autologin:
-                self.db.flush()
-
+                self.db.flush()  # in order to get the pk
                 return authenticated(self.request, user.pk)
-
-            return HTTPFound(location=self.register_redirect_view)
+            else:  # not autologin: User must log in just after registering.
+                return HTTPFound(location=self.register_redirect_view)
 
     @view_config(route_name='horus_activate')
     def activate(self):
@@ -379,8 +386,8 @@ class ProfileController(BaseController):
         form = self.request.registry.getUtility(IHorusProfileForm)
         self.form = form(self.schema)
 
-
-    @view_config(route_name='horus_profile', renderer='horus:templates/profile.mako')
+    @view_config(route_name='horus_profile',
+        renderer='horus:templates/profile.mako')
     def profile(self):
         pk = self.request.matchdict.get('user_pk', None)
 
@@ -405,7 +412,7 @@ class ProfileController(BaseController):
 
             return {
                     'form': self.form.render(
-                        appstruct= dict(
+                        appstruct=dict(
                             User_name=username,
                             Email=email if email else '',
                         )
@@ -415,7 +422,7 @@ class ProfileController(BaseController):
             try:
                 controls = self.request.POST.items()
                 captured = self.form.validate(controls)
-            except deform.ValidationFailure, e:
+            except deform.ValidationFailure as e:
                 # We pre-populate username
                 e.cstruct['User_name'] = user.user_name
                 return {'form': e.render(), 'errors': e.error.children}
@@ -424,13 +431,11 @@ class ProfileController(BaseController):
 
             if email:
                 email_user = self.User.get_by_email(self.request, email)
-
                 if email_user:
                     if email_user.pk != user.pk:
-                        self.request.session.flash(_('That e-mail is already used.'), 'error')
-
+                        self.request.session.flash(
+                            _('That e-mail is already used.'), 'error')
                         return HTTPFound(location=self.request.url)
-
                 user.email = email
 
             password = captured.get('Password')
@@ -438,12 +443,12 @@ class ProfileController(BaseController):
             if password:
                 user.set_password(password)
 
-            self.request.session.flash(_('Profile successfully updated.'), 'success')
+            self.request.session.flash(_('Profile successfully updated.'),
+                'success')
 
             self.db.add(user)
 
             self.request.registry.notify(
                 ProfileUpdatedEvent(self.request, user, captured)
             )
-
             return HTTPFound(location=self.request.url)

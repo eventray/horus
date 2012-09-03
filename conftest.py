@@ -1,5 +1,11 @@
-from pkg_resources          import resource_filename
-import os
+# -*- coding: utf-8 -*-
+
+'''Tests'''
+
+from __future__ import (absolute_import, division, print_function,
+     unicode_literals)
+from pkg_resources import resource_filename
+
 
 def pytest_sessionstart():
     from py.test import config
@@ -12,17 +18,10 @@ def pytest_sessionstart():
         from sqlalchemy             import engine_from_config
 
         settings = appconfig('config:' + resource_filename(__name__,
-            'horus/tests/test.ini')
-        )
+            'horus/tests/test.ini'))
         engine = engine_from_config(settings, prefix='sqlalchemy.')
-
-        print 'Creating the tables on the test database %s' % engine
-
+        print('Creating the tables on the test database %s' % engine)
         config = Configurator(settings=settings)
         config.scan('horus.models')
-
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
-
-
-

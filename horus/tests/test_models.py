@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from horus.tests        import UnitTestBase
 from horus.tests.models import Base
 from pyramid            import testing
@@ -7,8 +11,10 @@ from sqlalchemy         import Column
 
 from datetime           import datetime
 
+
 class TestModel(Base):
     start_date = Column(DateTime)
+
 
 class TestModels(UnitTestBase):
     def test_tablename(self):
@@ -21,6 +27,7 @@ class TestModels(UnitTestBase):
         model.start_date = datetime.now()
 
         assert model.__json__() == {'pk': 1, 'start_date': model.start_date.isoformat()}
+
 
 class TestActivation(UnitTestBase):
     def test_create_activation_without_valid_until(self):
@@ -272,6 +279,7 @@ class TestUser(UnitTestBase):
 
         assert new_user == user2
 
+
 class TestGroup(UnitTestBase):
     def test_init(self):
         from horus.tests.models import Group
@@ -316,4 +324,3 @@ class TestGroup(UnitTestBase):
         group = Group.get_by_pk(request, group2.pk)
 
         assert group.name == 'employees'
-

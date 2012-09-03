@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from horus.tests import UnitTestBase
 from horus.schemas import LoginSchema
 from colander import Invalid
+
 
 class TestModels(UnitTestBase):
     def test_valid_login_schema(self):
@@ -27,11 +32,8 @@ class TestModels(UnitTestBase):
             except Invalid as exc:
                 assert len(exc.children) == 3
                 errors = ['csrf_token', 'User_name', 'Password']
-
                 for child in exc.children:
                     assert child.node.name in errors
-                    assert child.msg == u'Required'
-
+                    assert child.msg == 'Required'
                 raise
-
         self.assertRaises(Invalid, deserialize_empty)

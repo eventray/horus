@@ -1,8 +1,13 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import (absolute_import, division, print_function,
+    unicode_literals)
 from pyramid import testing
 from horus.tests import UnitTestBase
 
 from mock import patch
 from mock import Mock
+
 
 class TestInitCase(UnitTestBase):
     def test_root_factory(self):
