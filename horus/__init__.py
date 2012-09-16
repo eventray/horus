@@ -68,4 +68,4 @@ def includeme(config):
         if not config.registry.queryUtility(form):
             config.registry.registerUtility(SubmitForm, form)
     config.include('horus.routes')
-    config.scan()
+    config.scan(ignore=str('horus.tests'))
