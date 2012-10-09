@@ -1,4 +1,4 @@
-<%inherit file="hiero:templates/layout.mako"/>
+<%inherit file="horus:templates/layout.mako"/>
 
 % if appstruct:
   ${form.render(appstruct=appstruct)|n}

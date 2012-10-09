@@ -1,4 +1,4 @@
-<%inherit file="hiero:templates/layout.mako"/>
+<%inherit file="horus:templates/layout.mako"/>
 
 <a href="${request.route_url('horus_admin_users_create')}">Create New User</a>
 
