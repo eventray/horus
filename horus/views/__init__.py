@@ -247,7 +247,7 @@ class ForgotPasswordController(BaseController):
 
                     password = captured['Password']
 
-                    user.password = password
+                    user.set_password(password)
                     self.db.add(user)
                     self.db.delete(activation)
 

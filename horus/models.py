@@ -185,9 +185,9 @@ class UserMixin(BaseModel):
         return sa.Column(sa.Unicode(256), nullable=False)
 
     @declared_attr
-    def password(self):
+    def _password(self):
         """ Password hash for user object """
-        return sa.Column(sa.Unicode(256), nullable=False)
+        return sa.Column('password', sa.Unicode(256), nullable=False)
 
     @declared_attr
     def activation_pk(self):
@@ -207,14 +207,19 @@ class UserMixin(BaseModel):
     def is_activated(self):
         return self.activation_pk == None
 
+    def get_password(self):
+        return self._password
+
     def set_password(self, raw_password):
-        self.password = self.hash_password(raw_password)
+        self._password = self.hash_password(raw_password)
 
     def hash_password(self, password):
         if not self.salt:
             self.salt = generate_random_string(24)
 
         return text_type(crypt.encode(password + self.salt))
+
+    password = property(get_password, set_password)
 
     def gravatar_url(self, default='mm'):
         """ returns user gravatar url """
