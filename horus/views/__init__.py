@@ -90,6 +90,20 @@ class BaseController(object):
         self.db = get_session(request)
 
 
+@view_config(name='horus_wrapper', renderer='horus:templates/wrapper.mako')
+def horus_wrapper(request):
+    '''View that can wrap the other views in a "master template".
+
+    This view does not have a route associated with it. I mean, "horus_wrapper"
+    is a view name, not a route name.
+    '''
+    if isinstance(request.wrapped_response, Exception):
+        # (Every HTTP exception is a subclass of Exception.)
+        return request.wrapped_response  # Preserve redirects and errors.
+    else:
+        return {}
+
+
 class AuthController(BaseController):
     def __init__(self, request):
         super(AuthController, self).__init__(request)
@@ -106,7 +120,7 @@ class AuthController(BaseController):
 
         self.form = form(self.schema)
 
-    @view_config(route_name='horus_login',
+    @view_config(route_name='horus_login', wrapper='horus_wrapper',
         renderer='horus:templates/login.mako')
     def login(self):
         if self.request.method == 'GET':
@@ -166,7 +180,8 @@ class ForgotPasswordController(BaseController):
         self.forgot_password_redirect_view = route_url(self.settings.get('horus.forgot_password_redirect', 'index'), request)
         self.reset_password_redirect_view = route_url(self.settings.get('horus.reset_password_redirect', 'index'), request)
 
-    @view_config(route_name='horus_forgot_password', renderer='horus:templates/forgot_password.mako')
+    @view_config(route_name='horus_forgot_password', wrapper='horus_wrapper',
+        renderer='horus:templates/forgot_password.mako')
     def forgot_password(self):
         schema = self.request.registry.getUtility(IHorusForgotPasswordSchema)
         schema = schema().bind(request=self.request)
@@ -213,7 +228,8 @@ class ForgotPasswordController(BaseController):
         self.request.session.flash(_('Please check your e-mail to reset your password.'), 'success')
         return HTTPFound(location=self.reset_password_redirect_view)
 
-    @view_config(route_name='horus_reset_password', renderer='horus:templates/reset_password.mako')
+    @view_config(route_name='horus_reset_password', wrapper='horus_wrapper',
+        renderer='horus:templates/reset_password.mako')
     def reset_password(self):
         schema = self.request.registry.getUtility(IHorusResetPasswordSchema)
         schema = schema().bind(request=self.request)
@@ -282,7 +298,7 @@ class RegisterController(BaseController):
         if self.require_activation:
             self.mailer = get_mailer(request)
 
-    @view_config(route_name='horus_register',
+    @view_config(route_name='horus_register', wrapper='horus_wrapper',
         renderer='horus:templates/register.mako')
     def register(self):
         if self.request.method == 'GET':
@@ -386,7 +402,7 @@ class ProfileController(BaseController):
         form = self.request.registry.getUtility(IHorusProfileForm)
         self.form = form(self.schema)
 
-    @view_config(route_name='horus_profile',
+    @view_config(route_name='horus_profile', wrapper='horus_wrapper',
         renderer='horus:templates/profile.mako')
     def profile(self):
         pk = self.request.matchdict.get('user_pk', None)
@@ -399,7 +415,7 @@ class ProfileController(BaseController):
         return {'user': user}
 
     @view_config(permission='access_user', route_name='horus_edit_profile',
-        renderer='horus:templates/edit_profile.mako')
+        renderer='horus:templates/edit_profile.mako', wrapper='horus_wrapper')
     def edit_profile(self):
         user = self.request.context
 
