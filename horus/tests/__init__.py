@@ -61,6 +61,7 @@ class BaseTestCase(unittest.TestCase):
         testing.tearDown()
         self.trans.rollback()
         self.session.close()
+        self.connection.close()
 
 
 class UnitTestBase(BaseTestCase):
