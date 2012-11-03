@@ -45,7 +45,7 @@ class TestViews(IntegrationTestBase):
         """ Call the login view, make sure routes are working """
         from horus.tests.models import User
         admin = User(user_name='sontek', email='sontek@gmail.com')
-        admin.set_password('temp')
+        admin.password = 'temp'
         self.session.add(admin)
         self.session.flush()
 
@@ -70,7 +70,7 @@ class TestViews(IntegrationTestBase):
         from horus.tests.models import Activation
         admin = User(user_name='sontek', email='sontek@gmail.com')
         admin.activation = Activation()
-        admin.set_password('temp')
+        admin.password = 'temp'
         self.session.add(admin)
         self.session.flush()
 

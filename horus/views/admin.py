@@ -50,7 +50,7 @@ class AdminController(BaseController):
                 user = self.request.context
 
             if captured['password']:
-                user.set_password(captured['password'])
+                user.password = captured['password']
 
             self.db.add(user)
 

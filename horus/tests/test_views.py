@@ -173,7 +173,7 @@ class TestAuthController(UnitTestBase):
         self.config.registry.registerUtility(User, IHorusUserClass)
 
         admin = User(user_name='sontek', email='sontek@gmail.com')
-        admin.set_password('foo')
+        admin.password = 'foo'
 
         self.session.add(admin)
         self.session.flush()
@@ -204,7 +204,7 @@ class TestAuthController(UnitTestBase):
 
         self.config.registry.registerUtility(User, IHorusUserClass)
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
         self.session.add(user)
         self.session.flush()
@@ -458,7 +458,7 @@ class TestRegisterController(UnitTestBase):
         self.config.add_route('index', '/')
 
         admin = User(user_name='sontek', email='sontek@gmail.com')
-        admin.set_password('test123')
+        admin.password = 'test123'
         self.session.add(admin)
         self.session.flush()
 
@@ -588,7 +588,7 @@ class TestRegisterController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', email='sontek2@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
 
         self.session.add(user)
@@ -630,10 +630,10 @@ class TestRegisterController(UnitTestBase):
 
         user = User(user_name='sontek', email='sontek@gmail.com')
         user.activation = Activation()
-        user.set_password('foo')
+        user.password = 'foo'
         user1 = User(user_name='sontek1', email='sontek+2@gmail.com')
         user1.activation = Activation()
-        user1.set_password('foo2')
+        user1.password = 'foo2'
 
         self.session.add(user)
         self.session.add(user1)
@@ -677,7 +677,7 @@ class TestRegisterController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         user.activation = Activation()
 
         self.session.add(user)
@@ -716,11 +716,11 @@ class TestRegisterController(UnitTestBase):
 
         user = User(user_name='sontek', email='sontek@gmail.com')
         user.activation = Activation()
-        user.set_password('foo')
+        user.password = 'foo'
 
         user2 = User(user_name='jessie', email='sontek+2@gmail.com')
         user2.activation = bad_act
-        user2.set_password('foo2')
+        user2.password = 'foo2'
 
         self.session.add(user)
         self.session.add(user2)
@@ -797,7 +797,7 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', password='temp', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
 
         self.session.add(user)
         self.session.flush()
@@ -832,7 +832,7 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', password='temp', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
 
         self.session.add(user)
         self.session.flush()
@@ -865,7 +865,7 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', password='temp', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
 
         self.session.add(user)
@@ -906,7 +906,7 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
 
         self.session.add(user)
@@ -960,7 +960,7 @@ class TestForgotPasswordController(UnitTestBase):
 
 
         user = User(user_name='sontek', password='temp', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
 
         self.session.add(user)
@@ -1005,7 +1005,7 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', password='temp', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
 
         self.session.add(user)
@@ -1046,7 +1046,7 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
         user = User(user_name='sontek', password='temp', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         user.activation = Activation()
 
         self.session.add(user)
@@ -1083,7 +1083,7 @@ class TestProfileController(UnitTestBase):
 
         user = User(user_name='sontek',
                 email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.flush()
 
@@ -1118,7 +1118,7 @@ class TestProfileController(UnitTestBase):
         self.config.include('horus')
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
 
         self.session.add(user)
         self.session.flush()
@@ -1158,7 +1158,7 @@ class TestProfileController(UnitTestBase):
         self.config.include('horus')
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.flush()
 
@@ -1196,7 +1196,7 @@ class TestProfileController(UnitTestBase):
         self.config.include('horus')
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.flush()
 
@@ -1246,7 +1246,7 @@ class TestProfileController(UnitTestBase):
         self.config.include('horus')
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
 
         self.session.add(user)
         self.session.flush()

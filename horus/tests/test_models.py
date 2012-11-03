@@ -66,8 +66,8 @@ class TestActivation(UnitTestBase):
 
         user1 = User(user_name='sontek1', email='sontek@gmail.com')
         user2 = User(user_name='sontek2', email='sontek+2@gmail.com')
-        user1.set_password('password')
-        user2.set_password('password')
+        user1.password = 'password'
+        user2.password = 'password'
 
         activation = Activation()
         user2.activation = activation
@@ -90,7 +90,7 @@ class TestUser(UnitTestBase):
     def test_password_hashing(self):
         from horus.tests.models import User
         user1 = User(user_name='sontek', email='sontek@gmail.com')
-        user1.set_password('password')
+        user1.password = 'password'
         self.session.add(user1)
         self.session.flush()
 
@@ -102,7 +102,7 @@ class TestUser(UnitTestBase):
         from pyramid.security import Allow
 
         user1 = User(user_name='sontek', email='sontek@gmail.com')
-        user1.set_password('foo')
+        user1.password = 'foo'
 
         self.session.add(user1)
         self.session.flush()
@@ -113,7 +113,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
@@ -127,9 +127,9 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         user2 = User(user_name='sontek2', email='sontek2@gmail.com')
-        user2.set_password('temp')
+        user2.password = 'temp'
         self.session.add(user)
         self.session.add(user2)
         self.session.commit()
@@ -144,7 +144,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek1', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
@@ -158,7 +158,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
@@ -172,7 +172,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
@@ -186,7 +186,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
@@ -200,7 +200,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
@@ -214,7 +214,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('password')
+        user.password = 'password'
 
         self.session.add(user)
         self.session.commit()
@@ -229,7 +229,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('password')
+        user.password = 'password'
         self.session.add(user)
         self.session.commit()
 
@@ -244,7 +244,7 @@ class TestUser(UnitTestBase):
         from horus.tests.models import Activation
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('password')
+        user.password = 'password'
         activation = Activation()
         user.activation = activation
 
@@ -263,8 +263,8 @@ class TestUser(UnitTestBase):
 
         user1 = User(user_name='sontek1', email='sontek@gmail.com')
         user2 = User(user_name='sontek2', email='sontek+2@gmail.com')
-        user1.set_password('password')
-        user2.set_password('password2')
+        user1.password = 'password'
+        user2.password = 'password2'
         activation = Activation()
         user2.activation = activation
 
@@ -293,7 +293,7 @@ class TestGroup(UnitTestBase):
         from horus.tests.models import User
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('temp')
+        user.password = 'temp'
         self.session.add(user)
 
         group = Group(name='admin', description='group for admins')

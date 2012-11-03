@@ -9,6 +9,7 @@ from datetime                   import datetime
 from datetime                   import timedelta
 from datetime                   import date
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.hybrid      import hybrid_property
 from sqlalchemy                 import or_
 from sqlalchemy                 import func
 
@@ -189,6 +190,14 @@ class UserMixin(BaseModel):
         """ Password hash for user object """
         return sa.Column('password', sa.Unicode(256), nullable=False)
 
+    @hybrid_property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        self._set_password(value)
+
     @declared_attr
     def activation_pk(self):
         return sa.Column(
@@ -207,19 +216,17 @@ class UserMixin(BaseModel):
     def is_activated(self):
         return self.activation_pk == None
 
-    def get_password(self):
+    def _get_password(self):
         return self._password
 
-    def set_password(self, raw_password):
-        self._password = self.hash_password(raw_password)
+    def _set_password(self, raw_password):
+        self._password = self._hash_password(raw_password)
 
-    def hash_password(self, password):
+    def _hash_password(self, password):
         if not self.salt:
             self.salt = generate_random_string(24)
 
-        return text_type(crypt.encode(password + self.salt))
-
-    password = property(get_password, set_password)
+        return unicode(crypt.encode(password + self.salt))
 
     def gravatar_url(self, default='mm'):
         """ returns user gravatar url """
@@ -361,7 +368,6 @@ class UserGroupMixin(BaseModel):
                 onupdate='CASCADE',
                 ondelete='CASCADE'
             ),
-            primary_key=True,
         )
 
     def __repr__(self):

@@ -33,7 +33,7 @@ class TestInitCase(UnitTestBase):
 #        from horus.tests.models import User
 #
 #        user1 = User(user_name='sontek', email='sontek@gmail.com')
-#        user1.set_password('foo')
+#        user1.password = 'foo'
 #        self.session.add(user1)
 #        self.session.flush()
 #
@@ -58,7 +58,7 @@ class TestInitCase(UnitTestBase):
 
         group = Group(name='foo', description='bar')
         user1 = User(user_name='sontek', email='sontek@gmail.com')
-        user1.set_password('foo')
+        user1.password = 'foo'
         group.users.append(user1)
 
         self.session.add(group)
@@ -82,8 +82,8 @@ class TestInitCase(UnitTestBase):
         group = Group(name='foo', description='bar')
         user1 = User(user_name='sontek', email='sontek@gmail.com')
         user2 = User(user_name='sontek2', email='sontek2@gmail.com')
-        user1.set_password('foo')
-        user2.set_password('foo')
+        user1.password = 'foo'
+        user2.password = 'foo'
         group.users.append(user1)
 
         self.session.add(group)

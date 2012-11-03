@@ -14,7 +14,7 @@ class TestResources(UnitTestBase):
         self.config.registry.registerUtility(User, IHorusUserClass)
 
         user = User(user_name='sontek', email='sontek@gmail.com')
-        user.set_password('foo')
+        user.password = 'foo'
         self.session.add(user)
         self.session.commit()
 

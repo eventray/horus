@@ -247,7 +247,7 @@ class ForgotPasswordController(BaseController):
 
                     password = captured['Password']
 
-                    user.set_password(password)
+                    user.password = password
                     self.db.add(user)
                     self.db.delete(activation)
 
@@ -318,9 +318,8 @@ class RegisterController(BaseController):
             activation = None
 
             try:
-                user = self.User(user_name=username, email=email)
-                user.set_password(password)
-
+                user = self.User(user_name=username, email=email,
+                                 password=password)
                 self.db.add(user)
 
                 if self.require_activation:
@@ -441,7 +440,7 @@ class ProfileController(BaseController):
             password = captured.get('Password')
 
             if password:
-                user.set_password(password)
+                user.password = password
 
             self.request.session.flash(_('Profile successfully updated.'),
                 'success')
