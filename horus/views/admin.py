@@ -7,11 +7,12 @@ from horus.schemas          import AdminUserSchema
 from horus.forms            import HorusForm
 from horus.resources        import RootFactory
 from horus.models           import _
-from pyramid.view           import view_config
+from pyramid.view           import view_config, view_defaults
 from pyramid.httpexceptions import HTTPFound
 import deform
 
 
+@view_defaults(permission='group:admin')
 class AdminController(BaseController):
     @view_config(
             route_name='horus_admin_users_create',
