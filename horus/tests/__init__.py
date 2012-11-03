@@ -18,8 +18,8 @@ from mock                   import Mock
 from horus.tests.models     import Base
 from horus.tests.models     import User
 from horus.tests.models     import Activation
-from horus.interfaces       import IHorusUserClass
-from horus.interfaces       import IHorusActivationClass
+from horus.interfaces       import IUserClass
+from horus.interfaces       import IActivationClass
 from pkg_resources          import resource_filename
 from hem.interfaces         import IDBSession
 import os
@@ -49,8 +49,8 @@ class BaseTestCase(unittest.TestCase):
         self.session = self.Session(bind=connection)
 
         self.config.registry.registerUtility(self.session, IDBSession)
-        self.config.registry.registerUtility(Activation, IHorusActivationClass)
-        self.config.registry.registerUtility(User, IHorusUserClass)
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
 
         Base.metadata.bind=connection
 
@@ -95,8 +95,8 @@ class IntegrationTestBase(unittest.TestCase):
         config = global_config
         config.add_settings(settings)
 
-        self.config.registry.registerUtility(Activation, IHorusActivationClass)
-        self.config.registry.registerUtility(User, IHorusUserClass)
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
 
         def index(request):
             return Response('index!')

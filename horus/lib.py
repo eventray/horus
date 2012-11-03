@@ -3,12 +3,14 @@
 from __future__ import (absolute_import, division, print_function,
     unicode_literals)
 from pyramid.security   import unauthenticated_userid
-from horus.interfaces   import IHorusUserClass
+from horus.interfaces   import IUserClass
 
 
 def get_user(request):
-    pk = unauthenticated_userid(request)
-    user_class = request.registry.queryUtility(IHorusUserClass)
+    userid = unauthenticated_userid(request)
+    user_class = request.registry.queryUtility(IUserClass)
 
-    if pk is not None:
-        return user_class.get_by_pk(request, pk)
+    if userid is not None:
+        return user_class.get_by_id(request, userid)
+
+    return None
