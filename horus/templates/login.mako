@@ -12,6 +12,6 @@
     % endfor
     <h1>Login</h1>
     ${form|n}
-    <a href="${request.route_url('horus_forgot_password')}">Forgot Password</a>
+    <a href="${request.route_url('forgot_password')}">Forgot Password</a>
   </body>
 </html>

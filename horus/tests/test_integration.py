@@ -44,8 +44,8 @@ class TestViews(IntegrationTestBase):
     def test_valid_login(self):
         """ Call the login view, make sure routes are working """
         from horus.tests.models import User
-        admin = User(user_name='sontek', email='sontek@gmail.com')
-        admin.set_password('temp')
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'temp'
         self.session.add(admin)
         self.session.flush()
 
@@ -56,7 +56,7 @@ class TestViews(IntegrationTestBase):
         res = self.app.post(str('/login'),
             {
                 'submit': True,
-                'User_name': 'sontek',
+                'Username': 'sontek',
                 'Password': 'temp',
                 'csrf_token': csrf
             }
@@ -68,9 +68,9 @@ class TestViews(IntegrationTestBase):
         """Make sure inactive users can't sign in."""
         from horus.tests.models import User
         from horus.tests.models import Activation
-        admin = User(user_name='sontek', email='sontek@gmail.com')
+        admin = User(username='sontek', email='sontek@gmail.com')
         admin.activation = Activation()
-        admin.set_password('temp')
+        admin.password = 'temp'
         self.session.add(admin)
         self.session.flush()
 
@@ -81,7 +81,7 @@ class TestViews(IntegrationTestBase):
         res = self.app.post(str('/login'),
             {
                 'submit': True,
-                'User_name': 'sontek',
+                'Username': 'sontek',
                 'Password': 'temp',
                 'csrf_token': csrf
             }

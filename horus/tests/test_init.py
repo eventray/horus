@@ -32,8 +32,8 @@ class TestInitCase(UnitTestBase):
 #        from horus import SignUpRequestFactory
 #        from horus.tests.models import User
 #
-#        user1 = User(user_name='sontek', email='sontek@gmail.com')
-#        user1.set_password('foo')
+#        user1 = User(username='sontek', email='sontek@gmail.com')
+#        user1.password = 'foo'
 #        self.session.add(user1)
 #        self.session.flush()
 #
@@ -57,8 +57,8 @@ class TestInitCase(UnitTestBase):
         from horus.tests.models import Group
 
         group = Group(name='foo', description='bar')
-        user1 = User(user_name='sontek', email='sontek@gmail.com')
-        user1.set_password('foo')
+        user1 = User(username='sontek', email='sontek@gmail.com')
+        user1.password = 'foo'
         group.users.append(user1)
 
         self.session.add(group)
@@ -71,7 +71,7 @@ class TestInitCase(UnitTestBase):
         results = groupfinder(1, request)
 
         assert 'group:foo' in results
-        assert 'user:%s' % (user1.pk) in results
+        assert 'user:%s' % (user1.id) in results
         assert len(results) == 2
 
     def test_group_finder_no_groups(self):
@@ -80,10 +80,10 @@ class TestInitCase(UnitTestBase):
         from horus.tests.models import Group
 
         group = Group(name='foo', description='bar')
-        user1 = User(user_name='sontek', email='sontek@gmail.com')
-        user2 = User(user_name='sontek2', email='sontek2@gmail.com')
-        user1.set_password('foo')
-        user2.set_password('foo')
+        user1 = User(username='sontek', email='sontek@gmail.com')
+        user2 = User(username='sontek2', email='sontek2@gmail.com')
+        user1.password = 'foo'
+        user2.password = 'foo'
         group.users.append(user1)
 
         self.session.add(group)
@@ -97,4 +97,4 @@ class TestInitCase(UnitTestBase):
         results = groupfinder(2, request)
 
         assert len(results) == 1
-        assert 'user:%s' % (user2.pk) in results
+        assert 'user:%s' % (user2.id) in results

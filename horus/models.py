@@ -9,6 +9,7 @@ from datetime                   import datetime
 from datetime                   import timedelta
 from datetime                   import date
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.hybrid      import hybrid_property
 from sqlalchemy                 import or_
 from sqlalchemy                 import func
 
@@ -48,8 +49,7 @@ class BaseModel(object):
         )
 
     @declared_attr
-    def pk(self):
-        # We use "pk" instead of "id" because "id" is a python builtin.
+    def id(self):
         return sa.Column(sa.Integer, autoincrement=True, primary_key=True)
 
     def __json__(self, convert_date=True):
@@ -63,13 +63,9 @@ class BaseModel(object):
                 continue
             if not key.startswith('__') and not key.startswith('_sa_'):
                 obj = getattr(self, key)
-                if isinstance(obj, datetime) or isinstance(obj, date):
-                        if convert_date:
-                            props[key] = obj.isoformat()
-                        else:
-                            props[key] = getattr(self, key)
-                else:
-                    props[key] = getattr(self, key)
+                if isinstance(obj, datetime) or isinstance(obj, date) and convert_date:
+                    obj = obj.isoformat()
+                props[key] = obj
         return props
 
     @classmethod
@@ -90,10 +86,10 @@ class BaseModel(object):
         return query
 
     @classmethod
-    def get_by_pk(cls, request, pk):
+    def get_by_id(cls, request, id):
         """Gets an object by its primary key."""
         session = get_session(request)
-        return session.query(cls).filter(cls.pk == pk).first()
+        return session.query(cls).filter(cls.id == id).first()
 
 
 class ActivationMixin(BaseModel):
@@ -140,8 +136,8 @@ class ActivationMixin(BaseModel):
 
 class UserMixin(BaseModel):
     @declared_attr
-    def user_name(self):
-        """ Unique user name """
+    def username(self):
+        """ Unique username """
         return sa.Column(sa.Unicode(30), nullable=False, unique=True)
 
     @declared_attr
@@ -189,11 +185,19 @@ class UserMixin(BaseModel):
         """ Password hash for user object """
         return sa.Column('password', sa.Unicode(256), nullable=False)
 
+    @hybrid_property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        self._set_password(value)
+
     @declared_attr
-    def activation_pk(self):
+    def activation_id(self):
         return sa.Column(
             sa.Integer,
-            sa.ForeignKey('%s.pk' % ActivationMixin.__tablename__)
+            sa.ForeignKey('%s.id' % ActivationMixin.__tablename__)
         )
 
     @declared_attr
@@ -205,21 +209,19 @@ class UserMixin(BaseModel):
 
     @property
     def is_activated(self):
-        return self.activation_pk == None
+        return self.activation_id == None
 
-    def get_password(self):
+    def _get_password(self):
         return self._password
 
-    def set_password(self, raw_password):
-        self._password = self.hash_password(raw_password)
+    def _set_password(self, raw_password):
+        self._password = self._hash_password(raw_password)
 
-    def hash_password(self, password):
+    def _hash_password(self, password):
         if not self.salt:
             self.salt = generate_random_string(24)
 
-        return text_type(crypt.encode(password + self.salt))
-
-    password = property(get_password, set_password)
+        return unicode(crypt.encode(password + self.salt))
 
     def gravatar_url(self, default='mm'):
         """ returns user gravatar url """
@@ -240,24 +242,24 @@ class UserMixin(BaseModel):
         session = get_session(request)
 
         return session.query(cls).filter(
-                func.lower(cls.email) == email.lower()
+            func.lower(cls.email) == email.lower()
         ).first()
 
     @classmethod
-    def get_by_user_name(cls, request, user_name):
+    def get_by_username(cls, request, username):
         session = get_session(request)
 
         return session.query(cls).filter(
-            func.lower(cls.user_name) == user_name.lower(),
+            func.lower(cls.username) == username.lower()
         ).first()
 
     @classmethod
-    def get_by_user_name_or_email(cls, request, user_name, email):
+    def get_by_username_or_email(cls, request, username, email):
         session = get_session(request)
 
         return session.query(cls).filter(
             or_(
-                func.lower(cls.user_name) == user_name.lower(),
+                func.lower(cls.username) == username.lower(),
                 cls.email == email
             )
         ).first()
@@ -275,12 +277,12 @@ class UserMixin(BaseModel):
     @classmethod
     def get_by_activation(cls, request, activation):
         session = get_session(request)
-        user = session.query(cls).filter(cls.activation_pk == activation.pk).first()
+        user = session.query(cls).filter(cls.activation_id == activation.id).first()
         return user
 
     @classmethod
-    def get_user(cls, request, user_name, password):
-        user = cls.get_by_user_name(request, user_name)
+    def get_user(cls, request, username, password):
+        user = cls.get_by_username(request, username)
 
         valid = cls.validate_user(user, password)
 
@@ -300,12 +302,12 @@ class UserMixin(BaseModel):
         return valid
 
     def __repr__(self):
-        return '<User: %s>' % self.user_name
+        return '<User: %s>' % self.username
 
     @property
     def __acl__(self):
         return [
-                (Allow, 'user:%s' % self.pk, 'access_user')
+                (Allow, 'user:%s' % self.id, 'access_user')
         ]
 
 
@@ -326,7 +328,7 @@ class GroupMixin(BaseModel):
         return sa.orm.relationship(
             'User',
             secondary=UserGroupMixin.__tablename__,
-            # order_by='%s.user.user_name' % UserMixin.__tablename__,
+            # order_by='%s.user.username' % UserMixin.__tablename__,
             passive_deletes=True,
             passive_updates=True,
             backref=pluralize(GroupMixin.__tablename__),
@@ -348,21 +350,20 @@ class GroupMixin(BaseModel):
 
 class UserGroupMixin(BaseModel):
     @declared_attr
-    def group_pk(self):
+    def group_id(self):
         return sa.Column(sa.Integer,
-            sa.ForeignKey('%s.pk' % GroupMixin.__tablename__)
+            sa.ForeignKey('%s.id' % GroupMixin.__tablename__)
         )
 
     @declared_attr
-    def user_pk(self):
+    def user_id(self):
         return sa.Column(
             sa.Integer,
-            sa.ForeignKey('%s.pk' % UserMixin.__tablename__,
+            sa.ForeignKey('%s.id' % UserMixin.__tablename__,
                 onupdate='CASCADE',
                 ondelete='CASCADE'
             ),
-            primary_key=True,
         )
 
     def __repr__(self):
-        return '<UserGroup: %s, %s>' % (self.group_name, self.user_pk,)
+        return '<UserGroup: %s, %s>' % (self.group_name, self.user_id,)
