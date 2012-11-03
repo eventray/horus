@@ -42,14 +42,17 @@ def includeme(config):
     # unicode string under Python 3, which is what we need:
     config.set_request_property(get_user, str('user'), reify=True)
     config.set_root_factory(RootFactory)
+
     if not config.registry.queryUtility(IHorusUserClass):
         user_class = get_class_from_config(settings, 'horus.user_class')
         config.registry.registerUtility(user_class, IHorusUserClass)
+
     if not config.registry.queryUtility(IHorusActivationClass):
         activation_class = get_class_from_config(settings,
                 'horus.activation_class')
         config.registry.registerUtility(activation_class,
                 IHorusActivationClass)
+
     schemas = [
         (IHorusLoginSchema, LoginSchema),
         (IHorusRegisterSchema, RegisterSchema),
@@ -57,13 +60,16 @@ def includeme(config):
         (IHorusResetPasswordSchema, ResetPasswordSchema),
         (IHorusProfileSchema, ProfileSchema)
     ]
+
     forms = [
         IHorusLoginForm, IHorusRegisterForm, IHorusForgotPasswordForm,
         IHorusResetPasswordForm, IHorusProfileForm
     ]
+
     for iface, schema in schemas:
         if not config.registry.queryUtility(iface):
             config.registry.registerUtility(schema, iface)
+
     for form in forms:
         if not config.registry.queryUtility(form):
             config.registry.registerUtility(SubmitForm, form)

@@ -431,11 +431,13 @@ class ProfileController(BaseController):
 
             if email:
                 email_user = self.User.get_by_email(self.request, email)
+
                 if email_user:
                     if email_user.pk != user.pk:
                         self.request.session.flash(
                             _('That e-mail is already used.'), 'error')
                         return HTTPFound(location=self.request.url)
+
                 user.email = email
 
             password = captured.get('Password')
@@ -451,4 +453,5 @@ class ProfileController(BaseController):
             self.request.registry.notify(
                 ProfileUpdatedEvent(self.request, user, captured)
             )
+
             return HTTPFound(location=self.request.url)
