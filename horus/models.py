@@ -2,7 +2,7 @@
 
 from __future__ import (absolute_import, division, print_function,
     unicode_literals)
-
+from pyramid.compat             import text_type as unicode
 from pyramid.i18n               import TranslationStringFactory
 from pyramid.security           import Allow
 from datetime                   import datetime
