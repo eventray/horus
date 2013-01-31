@@ -2,6 +2,10 @@
 
 from __future__ import (absolute_import, division, print_function,
     unicode_literals)
+try:
+    from urllib.parse import urlencode  # Python 3
+except ImportError:
+    from urllib import urlencode  # Python 2
 from pyramid.compat             import text_type as unicode
 from pyramid.i18n               import TranslationStringFactory
 from pyramid.security           import Allow
@@ -19,7 +23,6 @@ from hem.db                     import get_session
 
 import cryptacular.bcrypt
 import re
-import urllib
 import hashlib
 import sqlalchemy as sa
 
@@ -245,14 +248,13 @@ class UserMixin(BaseModel):
 
         return unicode(crypt.encode(password + self.salt))
 
-    def gravatar_url(self, default='mm'):
-        """ returns user gravatar url """
-        # construct the url
-        h = hashlib.md5(self.email.encode('utf8').lower()).hexdigest()
-        base_url = "https://secure.gravatar.com/avatar/%s?%s"
-        gravatar_url = base_url % (h, urllib.urlencode({'d': default}))
-
-        return gravatar_url
+    def gravatar_url(self, default='mm', size=80, cacheable=True):
+        '''Returns a Gravatar image URL for this user.'''
+        base = "http://www.gravatar.com/avatar/" if cacheable else \
+            "https://secure.gravatar.com/avatar/"
+        return base + \
+            hashlib.md5(self.email.encode('utf8').lower()).hexdigest() + \
+            "?" + urlencode({'d': default, 's': str(size)})
 
     @classmethod
     def generate_random_password(cls, chars=12):
