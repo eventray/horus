@@ -49,7 +49,7 @@ def authenticated(request, userid):
     autologin = asbool(settings.get('horus.autologin', False))
 
     if not autologin:
-        request.session.flash(_('Logged in successfully.'), 'success')
+        request.session.flash(_('You are now logged in.'), 'success')
 
     login_redirect_route = settings.get('horus.login_redirect', 'index')
     location = route_url(login_redirect_route, request)
@@ -67,18 +67,19 @@ def create_activation(request, user):
 
     db.flush()
 
+    # TODO Create a hook for the app to give us body and subject!
+    # TODO We don't need pystache just for this!
     body = pystache.render(
-        _("Please activate your e-mail address by visiting {{ link }}"),
+        _("Please validate your email and activate your account by visiting:\n"
+            "{{ link }}"),
         {
             'link': request.route_url('activate', user_id=user.id,
                                       code=user.activation.code)
         }
     )
-
-    subject = _("Please activate your e-mail address!")
+    subject = _("Please activate your account!")
 
     message = Message(subject=subject, recipients=[user.email], body=body)
-
     mailer = get_mailer(request)
     mailer.send(message)
 
@@ -216,7 +217,7 @@ class AuthController(BaseController):
         horus.logout_redirect, which defaults to a view named 'index'.
         """
         self.request.session.invalidate()
-        self.request.session.flash(_('Logged out successfully.'), 'success')
+        self.request.session.flash(_('You have logged out.'), 'success')
         headers = forget(self.request)
 
         return HTTPFound(location=self.logout_redirect_view, headers=headers)
@@ -268,15 +269,15 @@ class ForgotPasswordController(BaseController):
             if user:
                 mailer = get_mailer(self.request)
                 body = pystache.render(
-                    _("Someone has tried to reset your password, "
-                      "if this was you click here: {{ link }}"),
+                    _("Someone has tried to reset your password. "
+                      "If it was you, click here:\n{{ link }}"),
                     {
                         'link': route_url('reset_password', self.request,
                                           code=user.activation.code)
                     }
                 )
 
-                subject = _("Do you want to reset your password?")
+                subject = _("Reset your password")
 
                 message = Message(subject=subject, recipients=[user.email],
                                   body=body)
@@ -284,8 +285,8 @@ class ForgotPasswordController(BaseController):
 
         # we don't want to say "E-mail not registered" or anything like that
         # because it gives spammers context
-        self.request.session.flash(
-            _('Please check your e-mail to reset your password.'), 'success')
+        self.request.session.flash(_('Please check your e-mail to finish '
+            'resetting your password.'), 'success')
         return HTTPFound(location=self.reset_password_redirect_view)
 
     @view_config(route_name='reset_password',
@@ -400,7 +401,7 @@ class RegisterController(BaseController):
 
             try:
                 user = self.create_user(email, username, password)
-            except AuthenticationFailure as e:
+            except RegistrationFailure as e:
                 self.request.session.flash(str(e), 'error')
 
             autologin = asbool(self.settings.get('horus.autologin', False))
@@ -415,7 +416,7 @@ class RegisterController(BaseController):
             else:
                 if not autologin:
                     self.request.session.flash(
-                        _('You have been registered, you may log in now!'),
+                        _('You have been registered. You may log in now!'),
                         'success')
 
             self.request.registry.notify(
@@ -533,5 +534,4 @@ class ProfileController(BaseController):
             self.request.registry.notify(
                 ProfileUpdatedEvent(self.request, user, captured)
             )
-
             return HTTPFound(location=self.request.url)
