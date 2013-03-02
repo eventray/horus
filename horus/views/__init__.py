@@ -15,6 +15,7 @@ from pyramid_mailer.message import Message
 
 from horus.interfaces       import IUserClass
 from horus.interfaces       import IActivationClass
+from horus.interfaces       import IUIStrings
 from horus.interfaces       import ILoginForm
 from horus.interfaces       import ILoginSchema
 from horus.interfaces       import IRegisterForm
@@ -93,8 +94,10 @@ class BaseController(object):
     def __init__(self, request):
         self._request = request
         self.settings = request.registry.settings
-        self.User = request.registry.getUtility(IUserClass)
-        self.Activation = request.registry.getUtility(IActivationClass)
+        getUtility = request.registry.getUtility
+        self.User = getUtility(IUserClass)
+        self.Activation = getUtility(IActivationClass)
+        self.Str = getUtility(IUIStrings)
         self.db = get_session(request)
 
 
@@ -217,7 +220,7 @@ class AuthController(BaseController):
         horus.logout_redirect, which defaults to a view named 'index'.
         """
         self.request.session.invalidate()
-        self.request.session.flash(_('You have logged out.'), 'success')
+        self.request.session.flash(self.Str.logout, 'success')
         headers = forget(self.request)
 
         return HTTPFound(location=self.logout_redirect_view, headers=headers)
@@ -370,12 +373,12 @@ class RegisterController(BaseController):
 
         if user:
             # XXX offload this logic to the model
+            # TODO better yet, create colander validators for this
             if user.email.lower() == email.lower():
-                raise RegistrationFailure(
-                    _('That e-mail is already used.'))
+                raise RegistrationFailure(self.Str.registration_email_exists)
             else:
                 raise RegistrationFailure(
-                    _('That username is already used.'))
+                    self.Str.registration_username_exists)
 
         user = self.User(username=username, email=email, password=password)
         self.db.add(user)

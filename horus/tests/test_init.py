@@ -5,7 +5,6 @@ from __future__ import (absolute_import, division, print_function,
 from pyramid import testing
 from horus.tests import UnitTestBase
 
-from mock import patch
 from mock import Mock
 
 

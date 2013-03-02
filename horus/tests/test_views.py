@@ -14,10 +14,12 @@ class TestAuthController(UnitTestBase):
     def test_auth_controller_extensions(self):
         from horus.views        import AuthController
         from horus.interfaces   import IUserClass
-        from horus.tests.models import User
         from horus.interfaces   import ILoginSchema
         from horus.interfaces   import ILoginForm
         from horus.interfaces   import IActivationClass
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.tests.models import User
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
 
@@ -31,6 +33,7 @@ class TestAuthController(UnitTestBase):
         schema = Mock()
         form = Mock()
 
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
         self.config.registry.registerUtility(User, IUserClass)
         self.config.registry.registerUtility(schema, ILoginSchema)
         self.config.registry.registerUtility(form, ILoginForm)
@@ -231,9 +234,10 @@ class TestAuthController(UnitTestBase):
             'error')
 
     def test_logout(self):
+        from horus.strings      import UIStringsBase as Str
         from horus.views        import AuthController
         from horus.tests.models import User
-        from horus.interfaces import IUserClass
+        from horus.interfaces   import IUserClass
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -254,8 +258,7 @@ class TestAuthController(UnitTestBase):
         with patch('horus.views.forget') as forget:
             with patch('horus.views.HTTPFound') as HTTPFound:
                 view.logout()
-                flash.assert_called_with('Logged out successfully.',
-                    'success')
+                flash.assert_called_with(Str.logout, 'success')
                 forget.assert_called_with(request)
                 assert invalidate.called
                 assert HTTPFound.called
@@ -270,11 +273,13 @@ class TestRegisterController(UnitTestBase):
         from horus.interfaces           import IRegisterForm
         from horus.interfaces           import IUserClass
         from horus.tests.models         import User
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
-
         self.config.registry.registerUtility(User, IUserClass)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
 
         self.config.add_route('index', '/')
 
@@ -298,16 +303,18 @@ class TestRegisterController(UnitTestBase):
         assert form.called
 
     def test_register_controller_extensions_without_mail(self):
-        from horus.views import RegisterController
-        from horus.interfaces import IRegisterSchema
-        from horus.interfaces import IRegisterForm
-        from horus.interfaces           import IUserClass
-        from horus.tests.models         import User
+        from horus.views        import RegisterController
+        from horus.interfaces   import IRegisterSchema
+        from horus.interfaces   import IRegisterForm
+        from horus.interfaces   import IUserClass
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
-
         self.config.registry.registerUtility(User, IUserClass)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
 
         self.config.add_route('index', '/')
 
@@ -528,7 +535,7 @@ class TestRegisterController(UnitTestBase):
 
         assert user.is_activated == True
         flash.assert_called_with(
-            'You have been registered, you may log in now!', 'success')
+            'You have been registered. You may log in now!', 'success')
 
     def test_registration_craps_out(self):
         from horus.views                import RegisterController
@@ -812,8 +819,8 @@ class TestForgotPasswordController(UnitTestBase):
         view = ForgotPasswordController(request)
         response = view.forgot_password()
 
-        flash.assert_called_with(
-            'Please check your e-mail to reset your password.', 'success')
+        flash.assert_called_with('Please check your e-mail to finish '
+            'resetting your password.', 'success')
         assert response.status_int == 302
 
     def test_forgot_password_invalid_password(self):

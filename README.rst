@@ -9,7 +9,7 @@ Minimal integration
 ===================
 
 - Create a virtualenv and activate it. Install pyramid and create
-  a new pyramid project.
+  your pyramid project.
 
 - Edit your *setup.py* to add "horus" to the dependencies in the
   *install_requires* list.
@@ -30,6 +30,7 @@ Minimal integration
     from horus.interfaces import IHorusUserClass, IHorusActivationClass
     # Tell horus which SQLAlchemy session to use:
     registry.registerUtility(my_sqlalchemy_scoped_session, IDBSession)
+    # Tell horus which models to use:
     registry.registerUtility(User, IHorusUserClass)
     registry.registerUtility(Activation, IHorusActivationClass)
     config.include('horus')
@@ -38,11 +39,8 @@ Minimal integration
 
     $ su_setup <your app config.ini>
 
-- Either configure ``horus.login_redirect`` and ``horus.logout_redirect``
-  (in your .ini configuration file) to set the redirection routes or,
-  easier even, just declare an *index* route like this::
-
-    config.add_route('index', '/')
+- Configure ``horus.login_redirect`` and ``horus.logout_redirect``
+  (in your .ini configuration file) to set the redirection routes.
 
 - By now the login form should appear at /login, but /register shouldn't.
 

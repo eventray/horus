@@ -9,6 +9,7 @@ from horus.schemas          import ResetPasswordSchema
 from horus.schemas          import ProfileSchema
 from horus.forms            import SubmitForm
 from horus.resources        import RootFactory
+from horus.interfaces       import IUIStrings
 from horus.interfaces       import IUserClass
 from horus.interfaces       import IActivationClass
 from horus.interfaces       import ILoginForm
@@ -22,6 +23,7 @@ from horus.interfaces       import IResetPasswordSchema
 from horus.interfaces       import IProfileForm
 from horus.interfaces       import IProfileSchema
 from horus.lib              import get_user
+from horus.strings          import UIStringsBase
 from hem.config             import get_class_from_config
 
 
@@ -53,7 +55,8 @@ def includeme(config):
         config.registry.registerUtility(activation_class,
                 IActivationClass)
 
-    schemas = [
+    defaults = [
+        (IUIStrings, UIStringsBase),
         (ILoginSchema, LoginSchema),
         (IRegisterSchema, RegisterSchema),
         (IForgotPasswordSchema, ForgotPasswordSchema),
@@ -66,9 +69,9 @@ def includeme(config):
         IResetPasswordForm, IProfileForm
     ]
 
-    for iface, schema in schemas:
+    for iface, default in defaults:
         if not config.registry.queryUtility(iface):
-            config.registry.registerUtility(schema, iface)
+            config.registry.registerUtility(default, iface)
 
     for form in forms:
         if not config.registry.queryUtility(form):

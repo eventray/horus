@@ -5,6 +5,10 @@ from __future__ import (absolute_import, division, print_function,
 from zope.interface import Interface
 
 
+class IUIStrings(Interface):
+    pass
+
+
 class IUserClass(Interface):
     pass
 
