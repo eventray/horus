@@ -403,6 +403,7 @@ class RegisterController(BaseController):
                 user = self.create_user(email, username, password)
             except RegistrationFailure as e:
                 self.request.session.flash(str(e), 'error')
+                return HTTPFound(location=self.request.url)
 
             autologin = asbool(self.settings.get('horus.autologin', False))
 
