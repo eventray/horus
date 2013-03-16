@@ -2,14 +2,14 @@
 
 from __future__ import (absolute_import, division, print_function,
     unicode_literals)
+import deform
+from bag.web.pyramid.flash_msg import FlashMessage
+from pyramid.view           import view_config, view_defaults
+from pyramid.httpexceptions import HTTPFound
 from horus.views            import BaseController
 from horus.schemas          import AdminUserSchema
 from horus.forms            import HorusForm
 from horus.resources        import RootFactory
-from horus.models           import _
-from pyramid.view           import view_config, view_defaults
-from pyramid.httpexceptions import HTTPFound
-import deform
 
 
 @view_defaults(permission='group:admin')
@@ -55,7 +55,8 @@ class AdminController(BaseController):
 
             self.db.add(user)
 
-            self.request.session.flash(_('The user was created'), 'success')
+            FlashMessage(self.request, self.Str.admin_create_user_done,
+                'success')
 
             return HTTPFound(
                 location=self.request.route_url('admin_users_index')

@@ -52,7 +52,7 @@ class BaseTestCase(unittest.TestCase):
         self.config.registry.registerUtility(Activation, IActivationClass)
         self.config.registry.registerUtility(User, IUserClass)
 
-        Base.metadata.bind=connection
+        Base.metadata.bind = connection
 
     def tearDown(self):
         # rollback - everything that happened with the
@@ -94,9 +94,10 @@ class IntegrationTestBase(unittest.TestCase):
 
         config = global_config
         config.add_settings(settings)
+        config.include('bag.web.pyramid.flash_msg')
 
-        self.config.registry.registerUtility(Activation, IActivationClass)
-        self.config.registry.registerUtility(User, IUserClass)
+        config.registry.registerUtility(Activation, IActivationClass)
+        config.registry.registerUtility(User, IUserClass)
 
         def index(request):
             return Response('index!')
@@ -122,13 +123,12 @@ class IntegrationTestBase(unittest.TestCase):
         config.include('horus')
 
         app = config.make_wsgi_app()
-
         return app
 
     def setUp(self):
         self.engine = engine_from_config(settings, prefix='sqlalchemy.')
-        self.config = testing.setUp()
-        app = self.main(self.config, **settings)
+        config = testing.setUp()
+        app = self.main(config, **settings)
         self.app = TestApp(app)
         self.connection = connection = self.engine.connect()
 

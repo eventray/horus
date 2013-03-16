@@ -3,10 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
     unicode_literals)
 from pyramid import testing
-
-from mock import Mock
-from mock import patch
-
+from mock import Mock, patch
 from horus.tests import UnitTestBase
 
 
@@ -44,9 +41,9 @@ class TestAuthController(UnitTestBase):
         assert form.called
 
     def test_login_loads(self):
-        from horus.views          import AuthController
-        from horus.interfaces     import IUserClass
-        from horus.tests.models   import User
+        from horus.views        import AuthController
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -64,8 +61,8 @@ class TestAuthController(UnitTestBase):
 
     def test_login_redirects_if_logged_in(self):
         from horus.views import AuthController
-        from horus.interfaces     import IUserClass
-        from horus.tests.models   import User
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -82,10 +79,10 @@ class TestAuthController(UnitTestBase):
         assert response.status_int == 302
 
     def test_login_fails_empty(self):
-        """ Make sure we can't login with empty credentials"""
+        """Make sure we can't log in with empty credentials."""
         from horus.views import AuthController
-        from horus.interfaces     import IUserClass
-        from horus.tests.models   import User
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -112,8 +109,8 @@ class TestAuthController(UnitTestBase):
     def test_csrf_invalid_fails(self):
         """ Make sure we can't login with a bad csrf """
         from horus.views import AuthController
-        from horus.interfaces     import IUserClass
-        from horus.tests.models   import User
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -141,8 +138,8 @@ class TestAuthController(UnitTestBase):
     def test_login_fails_bad_credentials(self):
         """ Make sure we can't login with bad credentials"""
         from horus.views import AuthController
-        from horus.interfaces     import IUserClass
-        from horus.tests.models   import User
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -157,18 +154,16 @@ class TestAuthController(UnitTestBase):
                 'password': 'test123',
             }, request_method='POST')
 
-        flash = Mock()
-        request.session.flash = flash
-
         view = AuthController(request)
-        view.login()
-
-        flash.assert_called_with('Invalid username or password.', 'error')
+        with patch('horus.views.FlashMessage') as FlashMessage:
+            view.login()
+            FlashMessage.assert_called_with(request,
+                "Invalid username or password.", kind="error")
 
     def test_login_succeeds(self):
         """Make sure we can log in."""
         from horus.tests.models import User
-        from horus.interfaces     import IUserClass
+        from horus.interfaces   import IUserClass
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -200,7 +195,7 @@ class TestAuthController(UnitTestBase):
     def test_inactive_login_fails(self):
         """Make sure we can't log in with an inactive user."""
         from horus.tests.models import User
-        from horus.interfaces     import IUserClass
+        from horus.interfaces   import IUserClass
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -222,16 +217,12 @@ class TestAuthController(UnitTestBase):
                 'password': 'foo',
             }, request_method='POST')
 
-        flash = Mock()
-
-        request.session.flash = flash
-
         view = AuthController(request)
-        view.login()
-
-        flash.assert_called_with(
-            'Your account is not active, please check your e-mail.',
-            'error')
+        with patch('horus.views.FlashMessage') as FlashMessage:
+            view.login()
+            FlashMessage.assert_called_with(request,
+                'Your account is not active, please check your e-mail.',
+                kind='error')
 
     def test_logout(self):
         from horus.strings      import UIStringsBase as Str
@@ -246,19 +237,19 @@ class TestAuthController(UnitTestBase):
         self.config.include('horus')
         request = testing.DummyRequest()
 
-        flash = Mock()
         invalidate = Mock()
-
         request.user = Mock()
         request.session = Mock()
         request.session.invalidate = invalidate
-        request.session.flash = flash
 
         view = AuthController(request)
         with patch('horus.views.forget') as forget:
             with patch('horus.views.HTTPFound') as HTTPFound:
-                view.logout()
-                flash.assert_called_with(Str.logout, 'success')
+                with patch('horus.views.FlashMessage') as FlashMessage:
+                    view.logout()
+                    FlashMessage.assert_called_with(request,
+                        Str.logout, kind="success")
+
                 forget.assert_called_with(request)
                 assert invalidate.called
                 assert HTTPFound.called
@@ -455,7 +446,6 @@ class TestRegisterController(UnitTestBase):
         from horus.tests.models         import User
         from horus.interfaces           import IActivationClass
         from horus.tests.models         import Activation
-        from horus.exceptions           import RegistrationFailure
         self.config.registry.registerUtility(Activation, IActivationClass)
 
         self.config.registry.registerUtility(User, IUserClass)
@@ -479,11 +469,10 @@ class TestRegisterController(UnitTestBase):
             'email': 'sontek@gmail.com'
         }, request_method='POST')
 
-        flash = Mock()
-        request.session.flash = flash
-
-        controller = RegisterController(request)
-        self.assertRaises(RegistrationFailure, controller.register)
+        view = RegisterController(request)
+        adict = view.register()
+        assert isinstance(adict, dict)
+        assert adict['errors']
 
     def test_register_no_email_validation(self):
         from horus.views import RegisterController
@@ -491,8 +480,8 @@ class TestRegisterController(UnitTestBase):
         from pyramid_mailer.interfaces import IMailer
         from hem.interfaces import IDBSession
         from horus.events import NewRegistrationEvent
-        from horus.interfaces           import IUserClass
-        from horus.tests.models         import User
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -521,21 +510,16 @@ class TestRegisterController(UnitTestBase):
             'email': 'sontek@gmail.com'
         }, request_method='POST')
 
-        flash = Mock()
-        request.session.flash = flash
-
         request.user = Mock()
 
-        controller = RegisterController(request)
-        response = controller.register()
-
+        view = RegisterController(request)
+        with patch('horus.views.FlashMessage') as FlashMessage:
+            response = view.register()
+            FlashMessage.assert_called_with(request,
+                view.Str.registration_done, kind="success")
         assert response.status_int == 302
-
         user = User.get_by_username(request, 'admin')
-
         assert user.is_activated == True
-        flash.assert_called_with(
-            'You have been registered. You may log in now!', 'success')
 
     def test_registration_craps_out(self):
         from horus.views                import RegisterController
@@ -568,9 +552,6 @@ class TestRegisterController(UnitTestBase):
             'email': 'sontek@gmail.com'
         }, request_method='POST')
 
-        flash = Mock()
-        request.session.flash = flash
-
         request.user = Mock()
         controller = RegisterController(request)
 
@@ -580,8 +561,8 @@ class TestRegisterController(UnitTestBase):
         from horus.views import RegisterController
         from pyramid_mailer.interfaces import IMailer
         from pyramid_mailer.mailer import DummyMailer
-        from horus.interfaces           import IUserClass
-        from horus.tests.models         import User
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
         from horus.interfaces   import IActivationClass
         from horus.tests.models import Activation
         self.config.registry.registerUtility(Activation, IActivationClass)
@@ -789,19 +770,19 @@ class TestForgotPasswordController(UnitTestBase):
         assert response.status_int == 302
 
     def test_forgot_password_valid_user(self):
-        from horus.views import ForgotPasswordController
-        from pyramid_mailer.interfaces import IMailer
-        from pyramid_mailer.mailer import DummyMailer
+        from horus.views                import ForgotPasswordController
+        from pyramid_mailer.interfaces  import IMailer
+        from pyramid_mailer.mailer      import DummyMailer
         from horus.interfaces           import IUserClass
         from horus.tests.models         import User
-
         self.config.registry.registerUtility(User, IUserClass)
 
         self.config.add_route('index', '/')
         self.config.include('horus')
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
-        user = User(username='sontek', password='temp', email='sontek@gmail.com')
+        user = User(username='sontek', password='temp',
+            email='sontek@gmail.com')
         user.password = 'foo'
 
         self.session.add(user)
@@ -813,14 +794,12 @@ class TestForgotPasswordController(UnitTestBase):
 
         request.user = None
 
-        flash = Mock()
-        request.session.flash = flash
-
         view = ForgotPasswordController(request)
-        response = view.forgot_password()
 
-        flash.assert_called_with('Please check your e-mail to finish '
-            'resetting your password.', 'success')
+        with patch('horus.views.FlashMessage') as FlashMessage:
+            response = view.forgot_password()
+            FlashMessage.assert_called_with(request,
+                view.Str.reset_password_email_sent, kind="success")
         assert response.status_int == 302
 
     def test_forgot_password_invalid_password(self):
@@ -836,7 +815,8 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.include('horus')
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
-        user = User(username='sontek', password='temp', email='sontek@gmail.com')
+        user = User(username='sontek', password='temp',
+            email='sontek@gmail.com')
         user.password = 'foo'
 
         self.session.add(user)
@@ -869,7 +849,8 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.include('horus')
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
-        user = User(username='sontek', password='temp', email='sontek@gmail.com')
+        user = User(username='sontek', password='temp',
+            email='sontek@gmail.com')
         user.password = 'foo'
         user.activation = Activation()
 
@@ -931,9 +912,6 @@ class TestForgotPasswordController(UnitTestBase):
 
         request.user = None
 
-        flash = Mock()
-        request.session.flash = flash
-
         def handle_password_reset(event):
             request = event.request
             session = request.registry.getUtility(IDBSession)
@@ -963,8 +941,8 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.include('horus')
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
-
-        user = User(username='sontek', password='temp', email='sontek@gmail.com')
+        user = User(username='sontek', password='temp',
+            email='sontek@gmail.com')
         user.password = 'foo'
         user.activation = Activation()
 
@@ -984,9 +962,6 @@ class TestForgotPasswordController(UnitTestBase):
         request.matchdict.get = get
 
         request.user = None
-
-        flash = Mock()
-        request.session.flash = flash
 
         view = ForgotPasswordController(request)
         response = view.reset_password()
@@ -1009,7 +984,8 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.include('horus')
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
-        user = User(username='sontek', password='temp', email='sontek@gmail.com')
+        user = User(username='sontek', password='temp',
+            email='sontek@gmail.com')
         user.password = 'foo'
         user.activation = Activation()
 
@@ -1024,9 +1000,6 @@ class TestForgotPasswordController(UnitTestBase):
         request.matchdict.get = get
 
         request.user = None
-
-        flash = Mock()
-        request.session.flash = flash
 
         view = ForgotPasswordController(request)
 
@@ -1050,7 +1023,8 @@ class TestForgotPasswordController(UnitTestBase):
         self.config.include('horus')
         self.config.registry.registerUtility(DummyMailer(), IMailer)
 
-        user = User(username='sontek', password='temp', email='sontek@gmail.com')
+        user = User(username='sontek', password='temp',
+            email='sontek@gmail.com')
         user.password = 'foo'
         user.activation = Activation()
 
@@ -1086,17 +1060,13 @@ class TestProfileController(UnitTestBase):
         self.config.add_route('index', '/')
         self.config.include('horus')
 
-        user = User(username='sontek',
-                email='sontek@gmail.com')
+        user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'temp'
         self.session.add(user)
         self.session.flush()
 
         request = testing.DummyRequest()
         request.user = Mock()
-
-        flash = Mock()
-        request.session.flash = flash
 
         request.matchdict = Mock()
         get = Mock()
@@ -1130,9 +1100,6 @@ class TestProfileController(UnitTestBase):
 
         request = testing.DummyRequest()
         request.user = Mock()
-
-        flash = Mock()
-        request.session.flash = flash
 
         request.matchdict = Mock()
         get = Mock()
@@ -1175,9 +1142,6 @@ class TestProfileController(UnitTestBase):
         get.return_value = user.id
         request.matchdict.get = get
 
-        flash = Mock()
-        request.session.flash = flash
-
         view = ProfileController(request)
 
         response = view.edit_profile()
@@ -1217,9 +1181,6 @@ class TestProfileController(UnitTestBase):
         }, request_method='POST')
 
         request.user = user
-
-        flash = Mock()
-        request.session.flash = flash
 
         request.matchdict = Mock()
         get = Mock()
@@ -1278,9 +1239,6 @@ class TestProfileController(UnitTestBase):
         get = Mock()
         get.return_value = user.id
         request.matchdict.get = get
-
-        flash = Mock()
-        request.session.flash = flash
 
         view = ProfileController(request)
 

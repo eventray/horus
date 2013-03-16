@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function,
-    unicode_literals)
+                        unicode_literals)
 from pyramid.view           import view_config
 from pyramid.url            import route_url
 from pyramid.security       import remember
@@ -13,6 +13,8 @@ from pyramid.settings       import asbool
 from pyramid_mailer         import get_mailer
 from pyramid_mailer.message import Message
 
+from bag.web.pyramid.flash_msg import FlashMessage
+from hem.db                 import get_session
 from horus.interfaces       import IUserClass
 from horus.interfaces       import IActivationClass
 from horus.interfaces       import IUIStrings
@@ -32,9 +34,7 @@ from horus.events           import PasswordResetEvent
 from horus.events           import ProfileUpdatedEvent
 from horus.models           import _
 from horus.exceptions       import AuthenticationFailure
-from horus.exceptions       import RegistrationFailure
 from horus.httpexceptions   import HTTPBadRequest
-from hem.db                 import get_session
 
 import colander
 import deform
@@ -50,7 +50,8 @@ def authenticated(request, userid):
     autologin = asbool(settings.get('horus.autologin', False))
 
     if not autologin:
-        request.session.flash(_('You are now logged in.'), 'success')
+        Str = request.registry.getUtility(IUIStrings)
+        FlashMessage(request, Str.authenticated, kind='success')
 
     login_redirect_route = settings.get('horus.login_redirect', 'index')
     location = route_url(login_redirect_route, request)
@@ -206,12 +207,12 @@ class AuthController(BaseController):
             try:
                 user = self.check_credentials(username, password)
             except AuthenticationFailure as e:
-                self.request.session.flash(str(e), 'error')
+                FlashMessage(self.request, str(e), kind='error')
                 return {
                     'form': self.form.render(appstruct=captured),
                     'errors': [e]
                 }
-
+            self.request.user = user  # Please keep this line, my app needs it
             return authenticated(self.request, user.id)
 
     @view_config(permission='view', route_name='logout')
@@ -220,7 +221,7 @@ class AuthController(BaseController):
         horus.logout_redirect, which defaults to a view named 'index'.
         """
         self.request.session.invalidate()
-        self.request.session.flash(self.Str.logout, 'success')
+        FlashMessage(self.request, self.Str.logout, kind='success')
         headers = forget(self.request)
 
         return HTTPFound(location=self.logout_redirect_view, headers=headers)
@@ -232,64 +233,55 @@ class ForgotPasswordController(BaseController):
 
         self.forgot_password_redirect_view = route_url(
             self.settings.get('horus.forgot_password_redirect', 'index'),
-            request
-        )
+            request)
         self.reset_password_redirect_view = route_url(
             self.settings.get('horus.reset_password_redirect', 'index'),
-            request
-        )
+            request)
 
     @view_config(route_name='forgot_password',
                  renderer='horus:templates/forgot_password.mako')
     def forgot_password(self):
-        schema = self.request.registry.getUtility(IForgotPasswordSchema)
-        schema = schema().bind(request=self.request)
+        req = self.request
+        schema = req.registry.getUtility(IForgotPasswordSchema)
+        schema = schema().bind(request=req)
 
-        form = self.request.registry.getUtility(IForgotPasswordForm)
+        form = req.registry.getUtility(IForgotPasswordForm)
         form = form(schema)
 
-        if self.request.method == 'GET':
-            if self.request.user:
+        if req.method == 'GET':
+            if req.user:
                 return HTTPFound(location=self.forgot_password_redirect_view)
+            else:
+                return {'form': form.render()}
 
-            return {'form': form.render()}
+        # From here on, we know it's a POST. Let's validate the form
+        controls = req.POST.items()
+        try:
+            captured = form.validate(controls)
+        except deform.ValidationFailure as e:
+            # This catches if the email does not exist, too.
+            return {'form': e.render(), 'errors': e.error.children}
 
-        elif self.request.method == 'POST':
-            try:
-                controls = self.request.POST.items()
-                captured = form.validate(controls)
-            except deform.ValidationFailure as e:
-                return {'form': e.render(), 'errors': e.error.children}
+        user = self.User.get_by_email(req, captured['email'])
+        activation = self.Activation()
+        self.db.add(activation)
+        user.activation = activation
+        Str = self.Str
 
-            email = captured['email']
+        # TODO: Generate msg in a separate method so subclasses can override
+        mailer = get_mailer(req)
+        username = getattr(user, 'short_name', '') or \
+            getattr(user, 'full_name', '') or \
+            getattr(user, 'username', '') or user.email
+        body = Str.reset_password_email_body.format(
+            link=route_url('reset_password', req, code=user.activation.code),
+            username=username, domain=req.application_url)
+        subject = Str.reset_password_email_subject
+        message = Message(subject=subject, recipients=[user.email], body=body)
+        mailer.send(message)
 
-            user = self.User.get_by_email(self.request, email)
-            activation = self.Activation()
-            self.db.add(activation)
-
-            user.activation = activation
-
-            if user:
-                mailer = get_mailer(self.request)
-                body = pystache.render(
-                    _("Someone has tried to reset your password. "
-                      "If it was you, click here:\n{{ link }}"),
-                    {
-                        'link': route_url('reset_password', self.request,
-                                          code=user.activation.code)
-                    }
-                )
-
-                subject = _("Reset your password")
-
-                message = Message(subject=subject, recipients=[user.email],
-                                  body=body)
-                mailer.send(message)
-
-        # we don't want to say "E-mail not registered" or anything like that
-        # because it gives spammers context
-        self.request.session.flash(_('Please check your e-mail to finish '
-            'resetting your password.'), 'success')
+        FlashMessage(self.request, Str.reset_password_email_sent,
+            kind='success')
         return HTTPFound(location=self.reset_password_redirect_view)
 
     @view_config(route_name='reset_password',
@@ -331,13 +323,10 @@ class ForgotPasswordController(BaseController):
                     self.db.add(user)
                     self.db.delete(activation)
 
-                    self.request.registry.notify(
-                        PasswordResetEvent(self.request, user, password)
-                    )
-
-                    self.request.session.flash(
-                        _('Your password has been reset!'), 'success')
-
+                    FlashMessage(self.request, self.Str.reset_password_done,
+                        kind='success')
+                    self.request.registry.notify(PasswordResetEvent(
+                        self.request, user, password))
                     location = self.reset_password_redirect_view
                     return HTTPFound(location=location)
 
@@ -353,9 +342,9 @@ class RegisterController(BaseController):
         form = request.registry.getUtility(IRegisterForm)
         self.form = form(self.schema)
 
-        self.register_redirect_view = route_url(
+        self.after_register_url = route_url(
             self.settings.get('horus.register_redirect', 'index'), request)
-        self.activate_redirect_view = route_url(
+        self.after_activate_url = route_url(
             self.settings.get('horus.activate_redirect', 'index'), request)
 
         self.require_activation = asbool(
@@ -364,74 +353,52 @@ class RegisterController(BaseController):
         if self.require_activation:
             self.mailer = get_mailer(request)
 
-    def create_user(self, email, username, password):
-        user = self.User.get_by_username_or_email(
-            self.request,
-            username,
-            email
-        )
-
-        if user:
-            # XXX offload this logic to the model
-            # TODO better yet, create colander validators for this
-            if user.email.lower() == email.lower():
-                raise RegistrationFailure(self.Str.registration_email_exists)
-            else:
-                raise RegistrationFailure(
-                    self.Str.registration_username_exists)
-
-        user = self.User(username=username, email=email, password=password)
-        self.db.add(user)
-        return user
-
     @view_config(route_name='register',
                  renderer='horus:templates/register.mako')
     def register(self):
         if self.request.method == 'GET':
             if self.request.user:
-                return HTTPFound(location=self.register_redirect_view)
+                return HTTPFound(location=self.after_register_url)
             return {'form': self.form.render()}
-        elif self.request.method == 'POST':
-            try:
-                controls = self.request.POST.items()
-                captured = self.form.validate(controls)
-            except deform.ValidationFailure as e:
-                return {'form': e.render(), 'errors': e.error.children}
+        elif self.request.method != 'POST':
+            return
 
-            email = captured['email']
-            username = captured['username'].lower()
-            password = captured['password']
+        # If the request is a POST:
+        controls = self.request.POST.items()
+        try:
+            captured = self.form.validate(controls)
+        except deform.ValidationFailure as e:
+            return {'form': e.render(), 'errors': e.error.children}
+        # With the form validated, we know email and username are unique.
+        del captured['csrf_token']
+        user = self.persist_user(captured)
 
-            try:
-                user = self.create_user(email, username, password)
-            except RegistrationFailure as e:
-                self.request.session.flash(str(e), 'error')
-                return HTTPFound(location=self.request.url)
+        autologin = asbool(self.settings.get('horus.autologin', False))
 
-            autologin = asbool(self.settings.get('horus.autologin', False))
+        if self.require_activation:
+            # SEND EMAIL ACTIVATION
+            create_activation(self.request, user)
+            FlashMessage(self.request, self.Str.activation_check_email,
+                kind='success')
+        elif not autologin:
+            FlashMessage(self.request, self.Str.registration_done,
+                kind='success')
 
-            activation = None
-            if self.require_activation:
-                # SEND EMAIL ACTIVATION
-                create_activation(self.request, user)
-                self.request.session.flash(
-                    _('Please check your e-mail for an activation link.'),
-                    'success')
-            else:
-                if not autologin:
-                    self.request.session.flash(
-                        _('You have been registered. You may log in now!'),
-                        'success')
+        self.request.registry.notify(NewRegistrationEvent(
+            self.request, user, None, controls))
+        if autologin:
+            self.db.flush()  # in order to get the id
+            return authenticated(self.request, user.id)
+        else:  # not autologin: user must log in just after registering.
+            return HTTPFound(location=self.after_register_url)
 
-            self.request.registry.notify(
-                NewRegistrationEvent(self.request, user, activation, captured)
-            )
-
-            if autologin:
-                self.db.flush()  # in order to get the id
-                return authenticated(self.request, user.id)
-            else:  # not autologin: User must log in just after registering.
-                return HTTPFound(location=self.register_redirect_view)
+    def persist_user(self, controls):
+        '''To change how the user is stored, override this method.'''
+        # This generic method must work with any custom User class and any
+        # custom registration form:
+        user = self.User(**controls)
+        self.db.add(user)
+        return user
 
     @view_config(route_name='activate')
     def activate(self):
@@ -448,17 +415,13 @@ class RegisterController(BaseController):
 
             if user:
                 self.db.delete(activation)
-                self.db.add(user)
+                # self.db.add(user)  # not necessary
                 self.db.flush()
-
+                FlashMessage(self.request, self.Str.activation_email_verified,
+                             kind='success')
                 self.request.registry.notify(
-                    RegistrationActivatedEvent(self.request, user, activation)
-                )
-
-                self.request.session.flash(
-                    _('Your e-mail address has been verified.'), 'success')
-                return HTTPFound(location=self.activate_redirect_view)
-
+                    RegistrationActivatedEvent(self.request, user, activation))
+                return HTTPFound(location=self.after_activate_url)
         return HTTPNotFound()
 
 
@@ -519,8 +482,8 @@ class ProfileController(BaseController):
 
                 if email_user:
                     if email_user.id != user.id:
-                        self.request.session.flash(
-                            _('That e-mail is already used.'), 'error')
+                        FlashMessage(self.request,
+                            _('That e-mail is already used.'), kind='error')
                         return HTTPFound(location=self.request.url)
 
                 user.email = email
@@ -530,8 +493,8 @@ class ProfileController(BaseController):
             if password:
                 user.password = password
 
-            self.request.session.flash(_('Profile successfully updated.'),
-                                       'success')
+            FlashMessage(self.request, self.Str.edit_profile_done,
+                kind='success')
 
             self.db.add(user)
 

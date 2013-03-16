@@ -44,6 +44,7 @@ def includeme(config):
     # unicode string under Python 3, which is what we need:
     config.set_request_property(get_user, str('user'), reify=True)
     config.set_root_factory(RootFactory)
+    config.include('bag.web.pyramid.flash_msg')
 
     if not config.registry.queryUtility(IUserClass):
         user_class = get_class_from_config(settings, 'horus.user_class')

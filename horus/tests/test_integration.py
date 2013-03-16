@@ -9,14 +9,14 @@ from mock import Mock
 import re
 import six
 
+
 def clean_byte_string(string):
     regex = "^b'(.+)'$"
     match = re.search(regex, string)
-
     if match:
         return match.group(1)
-
     return string
+
 
 class TestViews(IntegrationTestBase):
     def test_index(self):
@@ -40,7 +40,8 @@ class TestViews(IntegrationTestBase):
         with patch.object(AuthController, 'request', request) as request:
             request.user = Mock()
             res = self.app.get('/login').follow()
-            #TODO: Patch index request as well so that it redirects to dashboard
+            # TODO: Patch index request as well so that it redirects to the
+            # dashboard
             assert b'index' in res.body
 
     def test_empty_login(self):
@@ -75,7 +76,6 @@ class TestViews(IntegrationTestBase):
                 'csrf_token': csrf
             }
         )
-
         assert res.status_int == 302
 
     def test_inactive_login(self):
