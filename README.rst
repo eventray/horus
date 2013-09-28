@@ -34,12 +34,12 @@ Minimal integration
 
     # Include horus
     from hem.interfaces import IDBSession
-    from horus.interfaces import IHorusUserClass, IHorusActivationClass
+    from horus.interfaces import IUserClass, IActivationClass
     # Tell horus which SQLAlchemy session to use:
     registry.registerUtility(my_sqlalchemy_scoped_session, IDBSession)
     # Tell horus which models to use:
-    registry.registerUtility(User, IHorusUserClass)
-    registry.registerUtility(Activation, IHorusActivationClass)
+    registry.registerUtility(User, IUserClass)
+    registry.registerUtility(Activation, IActivationClass)
     config.include('horus')
 
   If you don't want to register your classes manually you can do::

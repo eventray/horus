@@ -119,6 +119,7 @@ class IntegrationTestBase(unittest.TestCase):
         if settings.get('su.require_activation', True):
             config.include('pyramid_mailer')
 
+        config.include('pyramid_mako')
         config.include('horus')
 
         app = config.make_wsgi_app()

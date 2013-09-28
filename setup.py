@@ -38,6 +38,7 @@ requires = [
     'pyramid_mailer',
     'pyramid_beaker',
     'pyramid_deform',
+    'pyramid_mako',
 ]
 
 setup(name='horus',
