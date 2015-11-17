@@ -29,6 +29,14 @@ def includeme(config):
                      '/admin/users/{user_id}/edit',
                      factory=UserFactory,
                      traverse="/{user_id}")
+    config.add_route('admin_users_deactivate',
+                     '/admin/users/{user_id}/deactivate',
+                     factory=UserFactory,
+                     traverse="/{user_id}")
+    config.add_route('admin_users_activate',
+                     '/admin/users/{user_id}/activate',
+                     factory=UserFactory,
+                     traverse="/{user_id}")
 
     config.add_static_view(name='horus-static', path='horus:static',
                            cache_max_age=3600)

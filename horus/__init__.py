@@ -7,6 +7,8 @@ from horus.schemas import RegisterSchema
 from horus.schemas import ForgotPasswordSchema
 from horus.schemas import ResetPasswordSchema
 from horus.schemas import ProfileSchema
+from horus.schemas import AdminCreateUserSchema
+from horus.schemas import AdminEditUserSchema
 from horus.forms import SubmitForm
 from horus.resources import RootFactory
 from horus.interfaces import IUIStrings
@@ -22,6 +24,10 @@ from horus.interfaces import IResetPasswordForm
 from horus.interfaces import IResetPasswordSchema
 from horus.interfaces import IProfileForm
 from horus.interfaces import IProfileSchema
+from horus.interfaces import IAdminCreateUserForm
+from horus.interfaces import IAdminCreateUserSchema
+from horus.interfaces import IAdminEditUserForm
+from horus.interfaces import IAdminEditUserSchema
 from horus.lib import get_user
 from horus.lib import render_flash_messages_from_queues
 from horus import models
@@ -99,12 +105,15 @@ def includeme(config):
         (IRegisterSchema, RegisterSchema),
         (IForgotPasswordSchema, ForgotPasswordSchema),
         (IResetPasswordSchema, ResetPasswordSchema),
-        (IProfileSchema, ProfileSchema)
+        (IProfileSchema, ProfileSchema),
+        (IAdminCreateUserSchema, AdminCreateUserSchema),
+        (IAdminEditUserSchema, AdminEditUserSchema),
     ]
 
     forms = [
         ILoginForm, IRegisterForm, IForgotPasswordForm,
-        IResetPasswordForm, IProfileForm
+        IResetPasswordForm, IProfileForm,
+        IAdminCreateUserForm, IAdminEditUserForm
     ]
 
     for iface, default in defaults:

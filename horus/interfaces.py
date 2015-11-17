@@ -55,3 +55,20 @@ class IProfileForm(Interface):
 
 class IProfileSchema(Interface):
     pass
+
+
+class IAdminCreateUserSchema(Interface):
+    pass
+
+
+class IAdminCreateUserForm(Interface):
+    pass
+
+
+class IAdminEditUserSchema(Interface):
+    pass
+
+
+class IAdminEditUserForm(Interface):
+    pass
+

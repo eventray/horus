@@ -7,7 +7,7 @@ from horus.schemas import LoginSchema
 from colander import Invalid
 
 
-class TestModels(UnitTestBase):
+class TestSchemas(UnitTestBase):
     def test_valid_login_schema(self):
         request = self.get_csrf_request(post={
             'username': 'sontek',

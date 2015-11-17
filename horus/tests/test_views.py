@@ -1268,3 +1268,646 @@ class TestProfileController(UnitTestBase):
 
         assert new_user.email == 'sontek@gmail.com'
         assert not crypt.check(user.password, 'temp' + user.salt)
+
+class TestAdminController(UnitTestBase):
+
+    def test_admin_users_edit_validation_errors(self):
+        from horus.views.admin  import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
+
+        self.config.include('horus')
+
+        self.config.add_route('admin_users_index', '/admin/users')
+        self.config.add_route('admin_users_create', '/admin/users/new')
+
+        request = self.get_csrf_request(post={}, request_method='POST')
+        request.user = Mock()
+
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        view = AdminController(request)
+        response = view.create_user()
+
+        assert 'errors' in response
+        assert 'form' in response
+
+    def test_admin_edit_no_user_id(self):
+        from horus.views.admin import AdminController
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('index', '/')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+
+        request = testing.DummyRequest()
+        request.matchdict = Mock()
+
+        def get(key, default):
+            if key == 'user_id':
+                return None
+
+        request.matchdict.get = get
+
+        controller = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                controller.activate_user()
+                FlashMessage.assert_called_with(request,
+                    controller.Str.admin_user_id_missing,
+                    kind='error')
+
+            assert HTTPFound.called
+
+    def test_admin_edit_username(self):
+        from horus.views.admin import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('admin_users_index', '/admin/users')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'id': admin.id,
+            'username': 'sontek2',
+            'email': 'sontek@gmail.com'
+        }, request_method='POST')
+
+        request.matchdict = Mock()
+        def get(key, default):
+            if key == 'user_id':
+                return admin.id
+        request.matchdict.get = get
+
+        view = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                view.edit_user()
+                FlashMessage.assert_called_with(request,
+                    view.Str.admin_edit_user_done.format('sontek2'),
+                kind='success')
+
+            assert HTTPFound.called
+
+    def test_admin_edit_username_exists(self):
+        from horus.views.admin import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('admin_users_index', '/admin/users')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        admin2 = User(username='sontek2', email='sontek2@gmail.com')
+        admin2.password = 'test123'
+        self.session.add(admin2)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'id': admin.id,
+            'username': 'sontek2',
+            'email': 'sontek@gmail.com'
+        }, request_method='POST')
+
+        request.matchdict = Mock()
+        def get(key, default):
+            if key == 'user_id':
+                return admin.id
+        request.matchdict.get = get
+
+        view = AdminController(request)
+        resp = view.edit_user()
+
+        errors = resp['errors']
+
+        assert errors[0].node.name == 'username'
+        assert errors[0].msg == u'Sorry, an account with this username '\
+            u'already exists. Please enter another one.'
+
+    def test_admin_edit_email(self):
+        from horus.views.admin import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('admin_users_index', '/admin/users')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'id': admin.id,
+            'username': 'sontek',
+            'email': 'sontek2@gmail.com'
+        }, request_method='POST')
+
+        request.matchdict = Mock()
+        def get(key, default):
+            if key == 'user_id':
+                return admin.id
+        request.matchdict.get = get
+
+        view = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                view.edit_user()
+                FlashMessage.assert_called_with(request,
+                    view.Str.admin_edit_user_done.format('sontek'),
+                kind='success')
+
+            assert HTTPFound.called
+
+
+    def test_admin_edit_email_exists(self):
+        from horus.views.admin import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('admin_users_index', '/admin/users')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        admin2 = User(username='sontek2', email='sontek2@gmail.com')
+        admin2.password = 'test123'
+        self.session.add(admin2)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'id': admin.id,
+            'username': 'sontek',
+            'email': 'sontek2@gmail.com'
+        }, request_method='POST')
+
+        request.matchdict = Mock()
+        def get(key, default):
+            if key == 'user_id':
+                return admin.id
+        request.matchdict.get = get
+
+        view = AdminController(request)
+        resp = view.edit_user()
+
+        errors = resp['errors']
+
+        assert errors[0].node.name == 'email'
+        assert errors[0].msg[0] == u'Sorry, an account with the email '\
+            u'sontek2@gmail.com already exists. Try logging in instead.'
+
+    def test_admin_edit_password(self):
+        from horus.views.admin import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('admin_users_index', '/admin/users')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'id': admin.id,
+            'username': 'sontek',
+            'email': 'sontek@gmail.com',
+            'password': {
+                'password': 'test321',
+                'password-confirm': 'test321',
+            },
+        }, request_method='POST')
+
+        request.matchdict = Mock()
+        def get(key, default):
+            if key == 'user_id':
+                return admin.id
+        request.matchdict.get = get
+
+        view = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                view.edit_user()
+                FlashMessage.assert_called_with(request,
+                    view.Str.admin_edit_user_done.format('sontek'),
+                kind='success')
+
+            assert HTTPFound.called
+
+
+    def test_admin_users_create_submit(self):
+        from horus.views.admin  import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
+
+        self.config.include('horus')
+
+        self.config.add_route('admin_users_index', '/admin/users')
+        self.config.add_route('admin_users_create', '/admin/users/new')
+
+        request = self.get_csrf_request(post={
+            'username': 'admin',
+            'password': {
+                'password': 'test123',
+                'password-confirm': 'test123',
+            },
+            'email': 'sontek@gmail.com'
+        }, request_method='POST')
+        request.user = Mock()
+
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        view = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                view.create_user()
+                FlashMessage.assert_called_with(request,
+                    view.Str.admin_create_user_done.format('admin'),
+                    kind='success')
+
+            assert HTTPFound.called
+
+    def test_admin_users_create_existing_username(self):
+        from horus.views.admin  import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
+
+        self.config.include('horus')
+
+        self.config.add_route('admin_users_index', '/admin/users')
+        self.config.add_route('admin_users_create', '/admin/users/new')
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'username': 'sontek',
+            'password': {
+                'password': 'test123',
+                'password-confirm': 'test123',
+            },
+            'email': 'sontek2@gmail.com'
+        }, request_method='POST')
+        request.context = admin
+
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        view = AdminController(request)
+        response = view.create_user()
+
+        errors = response['errors']
+
+        assert errors[0].node.name == 'username'
+        assert errors[0].msg == u'Sorry, an account with this username '\
+            u'already exists. Please enter another one.'
+
+
+    def test_admin_users_create_existing_email(self):
+        from horus.views.admin  import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
+
+        self.config.include('horus')
+
+        self.config.add_route('admin_users_index', '/admin/users')
+        self.config.add_route('admin_users_create', '/admin/users/new')
+
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'test123'
+        self.session.add(admin)
+        self.session.flush()
+
+        request = self.get_csrf_request(post={
+            'username': 'sontek2',
+            'password': {
+                'password': 'test123',
+                'password-confirm': 'test123',
+            },
+            'email': 'sontek@gmail.com'
+        }, request_method='POST')
+        request.context = admin
+
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        view = AdminController(request)
+        response = view.create_user()
+
+        errors = response['errors']
+
+        assert errors[0].node.name == 'email'
+        assert errors[0].msg[0] == u'Sorry, an account with the email '\
+            u'sontek@gmail.com already exists. Try logging in instead.'
+
+    def test_admin_users_create_no_password(self):
+        from horus.views.admin  import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
+
+        self.config.include('horus')
+
+        self.config.add_route('admin_users_index', '/admin/users')
+        self.config.add_route('admin_users_create', '/admin/users/new')
+
+        request = self.get_csrf_request(post={
+            'username': 'sontek',
+            'email': 'sontek@gmail.com'
+        }, request_method='POST')
+
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        view = AdminController(request)
+        response = view.create_user()
+
+        errors = response['errors']
+
+        assert errors[0].node.name == 'password'
+        assert errors[0].msg == 'Required'
+
+
+    def test_admin_activate(self):
+        from horus.views.admin import AdminController
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('index', '/')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+
+        user = User(username='sontek', email='sontek2@gmail.com')
+        user.password = 'foo'
+        user.activation = Activation()
+
+        self.session.add(user)
+        self.session.flush()
+
+        request = testing.DummyRequest()
+        request.matchdict = Mock()
+
+        def get(key, default):
+            if key == 'user_id':
+                return user.id
+
+        request.matchdict.get = get
+
+        controller = AdminController(request)
+        response = controller.activate_user()
+        user = User.get_by_username(request, 'sontek')
+
+        assert user.is_activated
+        assert response.status_int == 302
+
+    def test_admin_activate_no_user_id(self):
+        from horus.views.admin import AdminController
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('index', '/')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+
+        request = testing.DummyRequest()
+        request.matchdict = Mock()
+
+        def get(key, default):
+            if key == 'user_id':
+                return None
+
+        request.matchdict.get = get
+
+        controller = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                controller.activate_user()
+                FlashMessage.assert_called_with(request,
+                    controller.Str.admin_user_id_missing,
+                    kind='error')
+
+            assert HTTPFound.called
+
+
+    def test_admin_deactivate(self):
+        from horus.views.admin import AdminController
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('index', '/')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+
+        user = User(username='sontek', email='sontek2@gmail.com')
+        user.password = 'foo'
+
+        self.session.add(user)
+        self.session.flush()
+
+        assert user.is_activated
+
+        request = testing.DummyRequest()
+        request.matchdict = Mock()
+
+        def get(key, default):
+            if key == 'user_id':
+                return user.id
+
+        request.matchdict.get = get
+
+        controller = AdminController(request)
+        response = controller.deactivate_user()
+        user = User.get_by_username(request, 'sontek')
+
+        assert not user.is_activated
+        assert response.status_int == 302
+
+
+    def test_admin_deactivate_no_user_id(self):
+        from horus.views.admin import AdminController
+        from pyramid_mailer.interfaces import IMailer
+        from pyramid_mailer.mailer import DummyMailer
+        from horus.interfaces import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+
+        self.config.registry.registerUtility(User, IUserClass)
+        self.config.include('horus')
+        self.config.add_route('index', '/')
+
+        self.config.registry.registerUtility(DummyMailer(), IMailer)
+
+        request = testing.DummyRequest()
+        request.matchdict = Mock()
+
+        def get(key, default):
+            if key == 'user_id':
+                return None
+
+        request.matchdict.get = get
+
+        controller = AdminController(request)
+
+        with patch('horus.views.admin.HTTPFound') as HTTPFound:
+            with patch('horus.views.admin.FlashMessage') as FlashMessage:
+                controller.deactivate_user()
+                FlashMessage.assert_called_with(request,
+                    controller.Str.admin_user_id_missing,
+                    kind='error')
+
+            assert HTTPFound.called
+
+
+    def test_admin_list_users(self):
+        from horus.views.admin  import AdminController
+        from horus.interfaces   import IUIStrings
+        from horus.strings      import UIStringsBase
+        from horus.interfaces   import IUserClass
+        from horus.tests.models import User
+        from horus.interfaces   import IActivationClass
+        from horus.tests.models import Activation
+        self.config.registry.registerUtility(Activation, IActivationClass)
+        self.config.registry.registerUtility(User, IUserClass)
+
+        self.config.include('horus')
+
+        request = Mock()
+        request.user = Mock()
+
+        self.config.registry.registerUtility(UIStringsBase, IUIStrings)
+
+        view = AdminController(request)
+        response = view.users_index()
+
+        assert 'users' in response
+
+

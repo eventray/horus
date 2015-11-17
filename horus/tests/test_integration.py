@@ -107,3 +107,40 @@ class TestViews(IntegrationTestBase):
 
         assert b'Your account is not active, please check your e-mail.' \
             in res.body
+
+    def test_admin_users_index(self):
+        from horus.tests.models import User
+        from horus.tests.models import Group
+        from horus.tests.models import UserGroup
+        admin = User(username='sontek', email='sontek@gmail.com')
+        admin.password = 'temp'
+        admin_group = Group(name='admin', description='group for admins')
+        self.session.add(admin)
+        self.session.add(admin_group)
+        self.session.flush()
+
+        user_group = UserGroup(user_id=admin.id, group_id=admin_group.id)
+        self.session.add(user_group)
+        self.session.flush()
+
+        res = self.app.get('/login')
+        csrf = res.form.fields['csrf_token'][0].value
+
+        if six.PY3:
+            csrf = clean_byte_string(csrf)
+
+        res = self.app.post(
+            str('/login'),
+            {
+                'submit': True,
+                'username': 'sontek',
+                'password': 'temp',
+                'csrf_token': csrf
+            }
+        )
+
+
+        res = self.app.get('/admin/users')
+        self.assertEqual(res.status_int, 200)
+
+
