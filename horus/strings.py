@@ -18,7 +18,18 @@ class UIStringsBase(object):  # TODO Continue building
     activation_email_verified = _("Your e-mail address has been verified. "
                                   "Thank you!")
 
-    admin_create_user_done = _('The user has been created.')
+    admin_create_user_done = _('The user {} has been created.')
+    admin_edit_user_done = _('The user {} has been updated successfully.')
+    admin_deactivate_user_done = _('The user {} has been '
+        'deactivated successfully.')
+    admin_activate_user_done = _('The user {} has been '
+        'activated successfully.')
+    admin_email_exists = _("Sorry, an account with the email {} "
+                            "already exists. Please enter another one.")
+    admin_username_exists = _("Sorry, an account with the username {} "
+                            "already exists. Please enter another one.")
+    admin_need_password = _("You must specify a valid password!")
+    admin_user_id_missing = _('You must specify a user ID for that action!')
 
     authenticated = _('You are now logged in.')
     login_button = _('Log in')

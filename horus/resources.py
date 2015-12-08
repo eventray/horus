@@ -6,6 +6,7 @@ from pyramid.security import Authenticated
 from pyramid.security import Allow
 from pyramid.security import ALL_PERMISSIONS
 from horus.interfaces import IUserClass
+from horus.interfaces import IActivationClass
 
 
 class BaseFactory(object):
@@ -32,6 +33,7 @@ class UserFactory(RootFactory):
     def __init__(self, request):
         self.request = request
         self.User = request.registry.getUtility(IUserClass)
+        self.Activation = request.registry.getUtility(IActivationClass)
 
     def __getitem__(self, key):
         user = self.User.get_by_id(self.request, key)

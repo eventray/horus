@@ -76,7 +76,8 @@ class FlashMessage(object):
         self.kind = kind
         self.rich = rich
         self.plain = plain
-        request.session.flash(self, allow_duplicate=allow_duplicate)
+        request.session.flash(self, self.kind,
+            allow_duplicate=allow_duplicate)
 
     def __repr__(self):
         return 'FlashMessage("{}")'.format(self.plain)

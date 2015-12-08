@@ -22,6 +22,7 @@ from horus.interfaces       import IUserClass
 from horus.interfaces       import IActivationClass
 from pkg_resources          import resource_filename
 from hem.interfaces         import IDBSession
+from horus                  import groupfinder
 import os
 
 here = os.path.dirname(__file__)
@@ -107,7 +108,8 @@ class IntegrationTestBase(unittest.TestCase):
         authz_policy = ACLAuthorizationPolicy()
         config.set_authorization_policy(authz_policy)
 
-        authn_policy = AuthTktAuthenticationPolicy('secret')
+        authn_policy = AuthTktAuthenticationPolicy('secret',
+            callback=groupfinder)
         config.set_authentication_policy(authn_policy)
 
         session_factory = session_factory_from_settings(settings)
