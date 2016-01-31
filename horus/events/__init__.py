@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function,
-    unicode_literals)
+                        unicode_literals)
 
 
 class BaseEvent(object):
@@ -13,7 +13,6 @@ class BaseEvent(object):
 class NewRegistrationEvent(BaseEvent):
     def __init__(self, request, user, activation, values):
         super(NewRegistrationEvent, self).__init__(request, user)
-
         self.activation = activation
         self.values = values
 

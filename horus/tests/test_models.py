@@ -6,9 +6,7 @@ from horus.tests import UnitTestBase
 from horus.tests.models import Base
 from pyramid import testing
 from sqlalchemy.types import DateTime
-
 from sqlalchemy import Column
-
 from datetime import datetime
 
 
@@ -103,35 +101,28 @@ class TestUser(UnitTestBase):
 
     def test_get_valid_user(self):
         from horus.tests.models import User
-
         user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_user(request, 'sontek', 'temp')
-
-        assert user == new_user
+        assert user is new_user
 
     def test_get_valid_user_by_security_code(self):
         from horus.tests.models import User
-
         user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_by_security_code(request, user.security_code)
-
-        assert user == new_user
+        assert user is new_user
 
     def test_get_all_users(self):
         from horus.tests.models import User
-
         user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'temp'
         user2 = User(username='sontek2', email='sontek2@gmail.com')
@@ -141,52 +132,41 @@ class TestUser(UnitTestBase):
         self.session.commit()
 
         request = testing.DummyRequest()
-
         users = User.get_all(request)
-
         assert len(users.all()) == 2
 
     def test_get_invalid_user(self):
         from horus.tests.models import User
-
         user = User(username='sontek1', email='sontek@gmail.com')
         user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_user(request, 'sontek', 'temp')
-
-        assert new_user == None
+        assert new_user is None
 
     def test_get_user_by_id(self):
         from horus.tests.models import User
-
         user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_by_id(request, user.id)
-
-        assert new_user == user
+        assert new_user is user
 
     def test_get_user_by_invalid_id(self):
         from horus.tests.models import User
-
         user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'temp'
         self.session.add(user)
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_by_id(request, 2)
-
-        assert new_user == None
+        assert new_user is None
 
     def test_get_user_by_username(self):
         from horus.tests.models import User
@@ -200,7 +180,7 @@ class TestUser(UnitTestBase):
 
         new_user = User.get_by_username(request, 'sontek')
 
-        assert new_user == user
+        assert new_user is user
 
     def test_get_user_by_invalid_username(self):
         from horus.tests.models import User
@@ -214,7 +194,7 @@ class TestUser(UnitTestBase):
 
         new_user = User.get_by_username(request, 'sontek1')
 
-        assert new_user == None
+        assert new_user is None
 
     def test_get_user_by_email(self):
         from horus.tests.models import User
@@ -229,21 +209,18 @@ class TestUser(UnitTestBase):
 
         new_user = User.get_by_email(request, user.email)
 
-        assert new_user == user
+        assert new_user is user
 
     def test_get_user_by_invalid_email(self):
         from horus.tests.models import User
-
         user = User(username='sontek', email='sontek@gmail.com')
         user.password = 'password'
         self.session.add(user)
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_by_email(request, 'sontek1@gmail.com')
-
-        assert new_user == None
+        assert new_user is None
 
     def test_get_user_by_activation(self):
         from horus.tests.models import User
@@ -258,10 +235,8 @@ class TestUser(UnitTestBase):
         self.session.commit()
 
         request = testing.DummyRequest()
-
         new_user = User.get_by_activation(request, activation)
-
-        assert new_user == user
+        assert new_user is user
 
     def test_get_user_by_activation_with_multiple_users(self):
         from horus.tests.models import User
@@ -283,7 +258,7 @@ class TestUser(UnitTestBase):
 
         new_user = User.get_by_activation(request, activation)
 
-        assert new_user == user2
+        assert new_user is user2
 
 
 class TestGroup(UnitTestBase):

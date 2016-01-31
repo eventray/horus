@@ -21,6 +21,7 @@ class BaseForm(deform.Form):
 
 class BootstrapForm(BaseForm):
     """This form renders out twitter bootstrap templates."""
+
     def __init__(self, *args, **kwargs):
         super(BootstrapForm, self).__init__(*args, **kwargs)
 

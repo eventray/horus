@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function,
-    unicode_literals)
-from horus.tests import UnitTestBase
+                        unicode_literals)
+from . import UnitTestBase
 
 
 class TestInterfaces(UnitTestBase):

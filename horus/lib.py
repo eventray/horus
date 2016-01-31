@@ -2,24 +2,22 @@
 
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from pyramid.security import unauthenticated_userid
-from horus.interfaces import IUserClass
 from cgi import escape
+from pyramid.security import unauthenticated_userid
+from .interfaces import IUserClass
 
 
 def get_user(request):
     userid = unauthenticated_userid(request)
     user_class = request.registry.queryUtility(IUserClass)
-
     if userid is not None:
         return user_class.get_by_id(request, userid)
-
     return None
 
 
 def render_flash_messages(request):
     msgs = request.session.pop_flash()  # Pops from the empty string queue
-    return ''.join([m.html if isinstance(m, FlashMessage)
+    return ''.join([m.html if hasattr(m, 'html')
                     else bootstrap_msg(m) for m in msgs])
 
 
@@ -38,8 +36,8 @@ def render_flash_messages_from_queues(request):
     msgs = []
     for q in QUEUES:
         for m in request.session.pop_flash(q):
-            html = m.html if isinstance(m, FlashMessage) \
-                else bootstrap_msg(m, q)
+            html = m.html if hasattr(m, 'html') \
+                else bootstrap_msg(plain=m, kind=q)
             msgs.append(html)
     return ''.join(msgs)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function,
-    unicode_literals)
+                        unicode_literals)
 from pyramid import httpexceptions as exc
 from pyramid.response import Response
 import json

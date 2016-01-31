@@ -3,13 +3,14 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import deform
-from pyramid.view           import view_config, view_defaults
+from pyramid.view import view_config, view_defaults
 from pyramid.httpexceptions import HTTPFound
-from horus.lib              import FlashMessage
-from horus.views            import BaseController
-from horus.schemas          import AdminUserSchema
-from horus.forms            import HorusForm
-from horus.resources        import RootFactory
+from ..interfaces import IUserClass
+from ..forms import HorusForm
+from ..lib import FlashMessage
+from ..resources import RootFactory
+from ..schemas import EmailAdminUserSchema, UsernameAdminUserSchema
+from ..views import BaseController
 
 
 @view_defaults(permission='group:admin')
@@ -23,7 +24,9 @@ class AdminController(BaseController):
         renderer='horus:templates/admin/create_user.mako'
     )
     def create_user(self):
-        schema = AdminUserSchema()
+        User = self.request.registry.queryUtility(IUserClass)
+        schema = UsernameAdminUserSchema() if hasattr(
+            User, 'username') else EmailAdminUserSchema()
         schema = schema.bind(request=self.request)
         form = HorusForm(schema)
 
@@ -42,22 +45,16 @@ class AdminController(BaseController):
             except deform.ValidationFailure as e:
                 return dict(form=e, errors=e.error.children)
 
+            del captured['csrf_token']
             if isinstance(self.request.context, RootFactory):
-                user = self.User(
-                    username=captured['username'],
-                    email=captured['email']
-                )
+                user = self.User(**captured)
             else:
                 user = self.request.context
-
             if captured['password']:
                 user.password = captured['password']
-
             self.db.add(user)
-
             FlashMessage(self.request, self.Str.admin_create_user_done,
-                         'success')
-
+                         kind='success')
             return HTTPFound(
                 location=self.request.route_url('admin_users_index')
             )

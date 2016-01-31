@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function,
-    unicode_literals)
-
+                        unicode_literals)
 from pyramid.settings import asbool
 
 
@@ -27,10 +26,9 @@ class FormValidationFailure(Exception):
             form = self.exc
             errors = self.exc.error.children
 
-        for k, v in cstruct.iteritems():
+        for k, v in cstruct.items():
             form.cstruct[k] = v
 
         if not retail:
             form = form.render()
-
         return {'form': form, 'errors': errors}

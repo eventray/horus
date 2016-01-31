@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function,
-    unicode_literals)
-from pyramid.security import Authenticated
-from pyramid.security import Allow
-from pyramid.security import ALL_PERMISSIONS
-from horus.interfaces import IUserClass
+                        unicode_literals)
+from pyramid.security import Authenticated, Allow, ALL_PERMISSIONS
+from .interfaces import IUserClass
 
 
 class BaseFactory(object):

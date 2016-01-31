@@ -146,12 +146,7 @@ def default_security_code():
     return generate_random_string(12)
 
 
-class UserMixin(BaseModel):
-    @declared_attr
-    def username(self):
-        """ Unique username """
-        return sa.Column(sa.Unicode(30), nullable=False, unique=True)
-
+class NoUsernameMixin(BaseModel):
     @declared_attr
     def email(self):
         """ E-mail for user """
@@ -212,28 +207,17 @@ class UserMixin(BaseModel):
 
     @declared_attr
     def activation_id(self):
-        return sa.Column(
-            sa.Integer,
-            sa.ForeignKey('%s.%s' % (
-                    ActivationMixin.__tablename__,
-                    self._idAttribute
-                )
-            )
-        )
+        return sa.Column(sa.Integer, sa.ForeignKey('%s.%s' % (
+            ActivationMixin.__tablename__,
+            self._idAttribute)))
 
     @declared_attr
     def activation(self):
-        return sa.orm.relationship(
-            'Activation',
-            backref='user'
-        )
+        return sa.orm.relationship('Activation', backref='user')
 
     @property
     def is_activated(self):
-        if self.activation_id is None:
-            return True
-
-        return False
+        return self.activation_id is None
 
     def _get_password(self):
         return self._password
@@ -263,15 +247,60 @@ class UserMixin(BaseModel):
     @classmethod
     def get_by_email(cls, request, email):
         session = get_session(request)
-
         return session.query(cls).filter(
             func.lower(cls.email) == email.lower()
         ).first()
 
     @classmethod
+    def get_by_activation(cls, request, activation):
+        session = get_session(request)
+        return session.query(cls).filter(
+            cls.activation_id == activation.id_value
+        ).first()
+
+    @classmethod
+    def get_by_security_code(cls, request, security_code):
+        session = get_session(request)
+        return session.query(cls).filter(
+            cls.security_code == security_code
+        ).first()
+
+    @classmethod
+    def get_by_email_password(cls, request, handle, password):
+        '''Only returns the user object if the password is correct.'''
+        user = cls.get_by_email(request, handle)
+        return cls.validate_user(user, password)
+    get_user = get_by_email_password  # get_user is overridden in UsernameMixin
+
+    @classmethod
+    def validate_user(cls, user, password):
+        '''Checks the password and returns the user object.'''
+        if not user:
+            return None
+        if user.password is None:
+            return False
+        if crypt.check(user.password, password + user.salt):
+            return user
+
+    def __repr__(self):
+        return '<User: %s>' % self.email
+
+    @property
+    def __acl__(self):
+        return [
+            (Allow, 'user:%s' % self.id_value, 'access_user')
+        ]
+
+
+class UsernameMixin(NoUsernameMixin):
+    '''Additional username column for sites that need it.'''
+    @declared_attr
+    def username(self):
+        return sa.Column(sa.Unicode(30), nullable=False, unique=True)
+
+    @classmethod
     def get_by_username(cls, request, username):
         session = get_session(request)
-
         return session.query(cls).filter(
             func.lower(cls.username) == username.lower()
         ).first()
@@ -279,7 +308,6 @@ class UserMixin(BaseModel):
     @classmethod
     def get_by_username_or_email(cls, request, username, email):
         session = get_session(request)
-
         return session.query(cls).filter(
             or_(
                 func.lower(cls.username) == username.lower(),
@@ -288,64 +316,22 @@ class UserMixin(BaseModel):
         ).first()
 
     @classmethod
-    def get_by_email_password(cls, request, email, password):
-        user = cls.get_by_email(request, email)
-
-        if user:
-            valid = cls.validate_user(user, password)
-
-            if valid:
-                return user
-
-    @classmethod
-    def get_by_activation(cls, request, activation):
-        session = get_session(request)
-
-        user = session.query(cls).filter(
-            cls.activation_id == activation.id_value
-        ).first()
-
-        return user
-
-    @classmethod
-    def get_by_security_code(cls, request, security_code):
-        session = get_session(request)
-
-        user = session.query(cls).filter(
-            cls.security_code == security_code
-        ).first()
-
-        return user
-
-    @classmethod
-    def get_user(cls, request, username, password):
+    def get_by_username_password(cls, request, username, password):
+        '''Only returns the user object if the password is correct.'''
         user = cls.get_by_username(request, username)
-
-        valid = cls.validate_user(user, password)
-
-        if valid:
-            return user
+        return cls.validate_user(user, password)
 
     @classmethod
-    def validate_user(cls, user, password):
-        if not user:
-            return None
-
-        if user.password is None:
-            valid = False
+    def get_user(cls, request, handle, password):
+        '''We override this method because ``handle`` could be a
+        username or an email.
+        '''
+        if '@' in handle:
+            return cls.get_by_email_password(request, handle, password)
         else:
-            valid = crypt.check(user.password, password + user.salt)
+            return cls.get_by_username_password(request, handle, password)
 
-        return valid
-
-    def __repr__(self):
-        return '<User: %s>' % self.username
-
-    @property
-    def __acl__(self):
-        return [
-            (Allow, 'user:%s' % self.id_value, 'access_user')
-        ]
+UserMixin = UsernameMixin  # The "UserMixin" name is kept for backwards compat
 
 
 class GroupMixin(BaseModel):
@@ -400,10 +386,8 @@ class UserGroupMixin(BaseModel):
     def user_id(self):
         return sa.Column(
             sa.Integer,
-            sa.ForeignKey('%s.%s' % (UserMixin.__tablename__,
-                                     self._idAttribute),
-                          onupdate='CASCADE',
-                          ondelete='CASCADE'),
+            sa.ForeignKey('user.' + self._idAttribute,
+                          onupdate='CASCADE', ondelete='CASCADE'),
         )
 
     def __repr__(self):

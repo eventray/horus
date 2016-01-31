@@ -16,28 +16,16 @@ from pyramid_mailer import get_mailer
 from pyramid_mailer.message import Message
 
 from hem.db import get_session
-from horus.interfaces import IUserClass
-from horus.interfaces import IActivationClass
-from horus.interfaces import IUIStrings
-from horus.interfaces import ILoginForm
-from horus.interfaces import ILoginSchema
-from horus.interfaces import IRegisterForm
-from horus.interfaces import IRegisterSchema
-from horus.interfaces import IForgotPasswordForm
-from horus.interfaces import IForgotPasswordSchema
-from horus.interfaces import IResetPasswordForm
-from horus.interfaces import IResetPasswordSchema
-from horus.interfaces import IProfileForm
-from horus.interfaces import IProfileSchema
-from horus.events import NewRegistrationEvent
-from horus.events import RegistrationActivatedEvent
-from horus.events import PasswordResetEvent
-from horus.events import ProfileUpdatedEvent
-from horus.lib import FlashMessage
-from horus.models import _
-from horus.exceptions import AuthenticationFailure
-from horus.exceptions import FormValidationFailure
-from horus.httpexceptions import HTTPBadRequest
+from ..interfaces import (
+    IUserClass, IActivationClass, IUIStrings, ILoginForm, ILoginSchema,
+    IRegisterForm, IRegisterSchema, IForgotPasswordForm, IForgotPasswordSchema,
+    IResetPasswordForm, IResetPasswordSchema, IProfileForm, IProfileSchema)
+from ..events import (NewRegistrationEvent, RegistrationActivatedEvent,
+                      PasswordResetEvent, ProfileUpdatedEvent)
+from ..lib import FlashMessage
+from ..models import _
+from ..exceptions import AuthenticationFailure, FormValidationFailure
+from ..httpexceptions import HTTPBadRequest
 
 import colander
 import deform
@@ -49,7 +37,6 @@ LOG = logging.getLogger(__name__)
 
 def get_config_route(request, config_key):
     settings = request.registry.settings
-
     try:
         return request.route_url(settings[config_key])
     except KeyError:
@@ -57,8 +44,9 @@ def get_config_route(request, config_key):
 
 
 def authenticated(request, userid):
-    """Sets the auth cookies and redirects to the page defined
-    in horus.login_redirect, which defaults to a view named 'index'.
+    """Sets the auth cookies and redirects either to the URL indicated in
+    the "next" parameter, or to the page defined in
+    horus.login_redirect, which defaults to a view named 'index'.
     """
     settings = request.registry.settings
     headers = remember(request, userid)
@@ -68,7 +56,8 @@ def authenticated(request, userid):
         Str = request.registry.getUtility(IUIStrings)
         FlashMessage(request, Str.authenticated, kind='success')
 
-    location = get_config_route(request, 'horus.login_redirect')
+    location = request.params.get('next') or get_config_route(
+        request, 'horus.login_redirect')
 
     return HTTPFound(location=location, headers=headers)
 
@@ -123,7 +112,6 @@ def validate_form(controls, form):
         #                debug logging, then log that we "ate" the exception
         LOG.debug('Form validation failed', exc_info=True)
         raise FormValidationFailure(form, e)
-
     return captured
 
 
@@ -170,15 +158,8 @@ class AuthController(BaseController):
         )
         self.form = form(self.schema, buttons=(self.Str.login_button,))
 
-    def check_credentials(self, username, password):
-        allow_email_auth = self.settings.get('horus.allow_email_auth', False)
-
-        user = self.User.get_user(self.request, username, password)
-
-        if allow_email_auth and not user:
-            user = self.User.get_by_email_password(
-                self.request, username, password)
-
+    def check_credentials(self, handle, password):
+        user = self.User.get_user(self.request, handle, password)
         if not user:
             raise AuthenticationFailure(_('Invalid username or password.'))
 
@@ -201,11 +182,11 @@ class AuthController(BaseController):
         except colander.Invalid as e:
             raise HTTPBadRequest({'invalid': e.asdict()})
 
-        username = captured['username']
+        handle = captured['handle']
         password = captured['password']
 
         try:
-            user = self.check_credentials(username, password)
+            user = self.check_credentials(handle, password)
         except AuthenticationFailure as e:
             raise HTTPBadRequest({
                 'status': 'failure',
@@ -229,24 +210,22 @@ class AuthController(BaseController):
 
         elif self.request.method == 'POST':
             controls = self.request.POST.items()
-
             try:
                 captured = validate_form(controls, self.form)
             except FormValidationFailure as e:
                 return e.result(self.request)
 
-            username = captured['username']
+            handle = captured['handle']
             password = captured['password']
 
             try:
-                user = self.check_credentials(username, password)
+                user = self.check_credentials(handle, password)
             except AuthenticationFailure as e:
                 FlashMessage(self.request, str(e), kind='error')
                 return render_form(self.request, self.form, captured,
                                    errors=[e])
 
             self.request.user = user  # Please keep this line, my app needs it
-
             return authenticated(self.request, user.id_value)
 
     @view_config(permission='view', route_name='logout')
@@ -255,8 +234,8 @@ class AuthController(BaseController):
         horus.logout_redirect, which defaults to a view named 'index'.
         """
         self.request.session.invalidate()
-        FlashMessage(self.request, self.Str.logout, kind='success')
         headers = forget(self.request)
+        FlashMessage(self.request, self.Str.logout, kind='success')
         return HTTPFound(location=self.logout_redirect_view, headers=headers)
 
 
@@ -300,7 +279,7 @@ class ForgotPasswordController(BaseController):
         self.db.add(activation)
         user.activation = activation
         self.db.flush() # initialize activation.code
-        
+
         Str = self.Str
 
         # TODO: Generate msg in a separate method so subclasses can override
@@ -329,38 +308,37 @@ class ForgotPasswordController(BaseController):
         form = form(schema)
 
         code = self.request.matchdict.get('code', None)
-
         activation = self.Activation.get_by_code(self.request, code)
+        if not activation:
+            return HTTPNotFound()
 
-        if activation:
-            user = self.User.get_by_activation(self.request, activation)
+        user = self.User.get_by_activation(self.request, activation)
 
-            if user:
-                if self.request.method == 'GET':
-                    appstruct = {'username': user.username}
-                    return render_form(self.request, form, appstruct)
+        if user:
+            if self.request.method == 'GET':
+                appstruct = {'username': user.username} if hasattr(
+                    user, 'username') else {'email': user.email}
+                return render_form(self.request, form, appstruct)
 
-                elif self.request.method == 'POST':
-                    controls = self.request.POST.items()
+            elif self.request.method == 'POST':
+                controls = self.request.POST.items()
+                try:
+                    captured = validate_form(controls, form)
+                except FormValidationFailure as e:
+                    return e.result(self.request)
 
-                    try:
-                        captured = validate_form(controls, form)
-                    except FormValidationFailure as e:
-                        return e.result(self.request)
+                password = captured['password']
 
-                    password = captured['password']
+                user.password = password
+                self.db.add(user)
+                self.db.delete(activation)
 
-                    user.password = password
-                    self.db.add(user)
-                    self.db.delete(activation)
-
-                    FlashMessage(self.request, self.Str.reset_password_done,
-                                 kind='success')
-                    self.request.registry.notify(PasswordResetEvent(
-                        self.request, user, password))
-                    location = self.reset_password_redirect_view
-                    return HTTPFound(location=location)
-        return HTTPNotFound()
+                FlashMessage(self.request, self.Str.reset_password_done,
+                             kind='success')
+                self.request.registry.notify(PasswordResetEvent(
+                    self.request, user, password))
+                location = self.reset_password_redirect_view
+                return HTTPFound(location=location)
 
 
 class RegisterController(BaseController):
@@ -440,23 +418,23 @@ class RegisterController(BaseController):
         user_id = self.request.matchdict.get('user_id', None)
 
         activation = self.Activation.get_by_code(self.request, code)
+        if not activation:
+            return HTTPNotFound()
 
-        if activation:
-            user = self.User.get_by_id(self.request, user_id)
+        user = self.User.get_by_id(self.request, user_id)
+        if not user:
+            return HTTPNotFound()
 
-            if user.activation != activation:
-                return HTTPNotFound()
+        if user.activation is not activation:
+            return HTTPNotFound()
 
-            if user:
-                self.db.delete(activation)
-                # self.db.add(user)  # not necessary
-                self.db.flush()
-                FlashMessage(self.request, self.Str.activation_email_verified,
-                             kind='success')
-                self.request.registry.notify(
-                    RegistrationActivatedEvent(self.request, user, activation))
-                return HTTPFound(location=self.after_activate_url)
-        return HTTPNotFound()
+        self.db.delete(activation)
+        FlashMessage(self.request, self.Str.activation_email_verified,
+                     kind='success')
+        self.request.registry.notify(
+            RegistrationActivatedEvent(self.request, user, activation))
+        # If an exception is raised in an event subscriber, this never runs:
+        return HTTPFound(location=self.after_activate_url)
 
 
 class ProfileController(BaseController):
@@ -472,28 +450,22 @@ class ProfileController(BaseController):
     @view_config(route_name='profile', renderer='horus:templates/profile.mako')
     def profile(self):
         user_id = self.request.matchdict.get('user_id', None)
-
         user = self.User.get_by_id(self.request, user_id)
-
         if not user:
             return HTTPNotFound()
-
         return {'user': user}
 
     @view_config(permission='access_user', route_name='edit_profile',
                  renderer='horus:templates/edit_profile.mako')
     def edit_profile(self):
         user = self.request.context
-
         if not user:
             return HTTPNotFound()
 
         if self.request.method == 'GET':
-            username = user.username
-            email = user.email
-
-            appstruct = {'username': username,
-                         'email': email if email else ''}
+            appstruct = {'email': user.email or ''}
+            if hasattr(user, 'username'):
+                appstruct['username'] = user.username
             return render_form(self.request, self.form, appstruct)
 
         elif self.request.method == 'POST':
@@ -502,33 +474,34 @@ class ProfileController(BaseController):
             try:
                 captured = validate_form(controls, self.form)
             except FormValidationFailure as e:
-                # We pre-populate username
-                return e.result(self.request, username=user.username)
+                if hasattr(user, 'username'):
+                    # We pre-populate username
+                    return e.result(self.request, username=user.username)
+                else:
+                    return e.result(self.request)
 
+            changed = False
             email = captured.get('email', None)
-
             if email:
                 email_user = self.User.get_by_email(self.request, email)
-
-                if email_user:
-                    if email_user.id != user.id:
-                        FlashMessage(self.request,
-                            _('That e-mail is already used.'), kind='error')
-                        return HTTPFound(location=self.request.url)
-
-                user.email = email
+                if email_user and email_user.id != user.id:
+                    FlashMessage(self.request,
+                                 _('That e-mail is already used.'),
+                                 kind='error')
+                    return HTTPFound(location=self.request.url)
+                if email != user.email:
+                    user.email = email
+                    changed = True
 
             password = captured.get('password')
-
             if password:
                 user.password = password
+                changed = True
 
-            FlashMessage(self.request, self.Str.edit_profile_done,
-                         kind='success')
-
-            self.db.add(user)
-
-            self.request.registry.notify(
-                ProfileUpdatedEvent(self.request, user, captured)
-            )
+            if changed:
+                FlashMessage(self.request, self.Str.edit_profile_done,
+                             kind='success')
+                self.request.registry.notify(
+                    ProfileUpdatedEvent(self.request, user, captured)
+                )
             return HTTPFound(location=self.request.url)
